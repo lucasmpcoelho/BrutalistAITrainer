@@ -54,7 +54,7 @@ export default function Hero() {
 
           {/* CTA Group */}
           <div className="flex flex-col sm:flex-row gap-4 pt-8">
-            <Link href="/dashboard">
+            <Link href="/onboarding">
               <a className="group relative bg-white text-black px-8 py-4 font-mono font-bold uppercase tracking-wider border-2 border-black brutal-shadow-lg hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
                 Initialize Protocol
                 <ArrowRight className="group-hover:translate-x-1 transition-transform" />
