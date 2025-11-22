@@ -1,6 +1,6 @@
 import { 
   Cpu, 
-  Dna, 
+  Watch, 
   Activity, 
   Lock, 
   Zap,
@@ -10,13 +10,13 @@ import {
 const features = [
   {
     icon: Cpu,
-    title: "Adaptive Intelligence",
-    desc: "Real-time load adjustment based on RPE and velocity tracking. The algorithm learns your failure point.",
+    title: "Neural Coaching",
+    desc: "Beyond static programs. A dynamic protocol that learns your preferences and feedback, adapting instantly like an elite human coach.",
   },
   {
-    icon: Dna,
-    title: "Genetic Profiling",
-    desc: "Input your biometric markers. We generate a split optimized for your fiber type composition.",
+    icon: Watch,
+    title: "Biometric Sync",
+    desc: "Hardline integration with Apple Watch & wearables. We read your HRV and sleep data to prescribe the exact dosage of suffering for today.",
   },
   {
     icon: Crosshair,
@@ -26,7 +26,7 @@ const features = [
   {
     icon: Activity,
     title: "Recovery Metrics",
-    desc: "HRV integration determines daily intensity caps. We don't let you overtrain.",
+    desc: "HRV integration determines daily intensity caps. We don't let you overtrain. We optimize your rest.",
   },
   {
     icon: Lock,
