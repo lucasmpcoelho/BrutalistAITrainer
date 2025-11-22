@@ -29,9 +29,11 @@ export default function Navbar() {
             <a href="#philosophy" className="hover:underline decoration-2 underline-offset-4">Philosophy</a>
             <a href="#pricing" className="hover:underline decoration-2 underline-offset-4">Membership</a>
             
-            <button className="bg-primary text-primary-foreground px-6 py-2 border-2 border-transparent hover:bg-transparent hover:text-primary hover:border-primary transition-all brutal-shadow-hover">
-              Start Training
-            </button>
+            <Link href="/dashboard">
+              <a className="bg-primary text-primary-foreground px-6 py-2 border-2 border-transparent hover:bg-transparent hover:text-primary hover:border-primary transition-all brutal-shadow-hover">
+                Start Training
+              </a>
+            </Link>
           </div>
 
           {/* Mobile Toggle */}
@@ -49,9 +51,11 @@ export default function Navbar() {
             <a href="#features" onClick={() => setIsOpen(false)}>Protocol</a>
             <a href="#philosophy" onClick={() => setIsOpen(false)}>Philosophy</a>
             <a href="#pricing" onClick={() => setIsOpen(false)}>Membership</a>
-            <button className="w-full bg-primary text-primary-foreground px-6 py-3 border-2 border-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
-              Start Training
-            </button>
+            <Link href="/dashboard">
+              <a className="w-full block text-center bg-primary text-primary-foreground px-6 py-3 border-2 border-transparent hover:bg-accent hover:text-accent-foreground transition-colors">
+                Start Training
+              </a>
+            </Link>
           </div>
         )}
       </nav>

@@ -1,6 +1,7 @@
 import { ArrowRight, Activity, Brain, Zap, Terminal } from "lucide-react";
 import videoSrc from "@assets/generated_videos/cinematic_black_and_white_abstract_fitness_background.mp4";
 import { useRef, useEffect } from "react";
+import { Link } from "wouter";
 
 export default function Hero() {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -53,10 +54,12 @@ export default function Hero() {
 
           {/* CTA Group */}
           <div className="flex flex-col sm:flex-row gap-4 pt-8">
-            <button className="group relative bg-white text-black px-8 py-4 font-mono font-bold uppercase tracking-wider border-2 border-black brutal-shadow-lg hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
-              Initialize Protocol
-              <ArrowRight className="group-hover:translate-x-1 transition-transform" />
-            </button>
+            <Link href="/dashboard">
+              <a className="group relative bg-white text-black px-8 py-4 font-mono font-bold uppercase tracking-wider border-2 border-black brutal-shadow-lg hover:translate-y-1 hover:shadow-none transition-all flex items-center gap-2 cursor-pointer">
+                Initialize Protocol
+                <ArrowRight className="group-hover:translate-x-1 transition-transform" />
+              </a>
+            </Link>
             
             <button className="px-8 py-4 font-mono font-bold uppercase tracking-wider text-white border-2 border-white hover:bg-white hover:text-black transition-colors cursor-pointer">
               View Documentation
