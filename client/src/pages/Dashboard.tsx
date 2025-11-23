@@ -13,14 +13,89 @@ import {
   Zap,
   Calendar,
   ChevronLeft,
-  ChevronRight
+  ChevronRight,
+  Info
 } from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
+
+// Exercise Instructions Data
+const instructions: Record<string, { video: string, steps: string[], cues: string[] }> = {
+  "Barbell Squat": {
+    video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0/3o7TKUM3IgJBX2as9O/giphy.gif", // Placeholder
+    steps: [
+      "Position bar on upper back (traps).",
+      "Feet shoulder-width apart, toes slightly out.",
+      "Brace core, inhale deeply.",
+      "Descend by breaking at hips and knees simultaneously.",
+      "Keep chest up, knees tracking over toes.",
+      "Drive up through mid-foot to starting position."
+    ],
+    cues: [
+      "Spread the floor with your feet.",
+      "Keep your chest proud.",
+      "Drive your back into the bar."
+    ]
+  },
+  "Romanian Deadlift": {
+    video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0/l0HlPtbGpcnqa0fja/giphy.gif", // Placeholder
+    steps: [
+      "Stand with feet hip-width apart, holding bar at thighs.",
+      "Keep knees soft (slight bend) but fixed.",
+      "Hinge at hips, pushing butt back.",
+      "Lower bar along legs until hamstring stretch is felt.",
+      "Drive hips forward to return to start."
+    ],
+    cues: [
+      "Shut the car door with your butt.",
+      "Protect your armpits (lats engaged).",
+      "Feel the stretch."
+    ]
+  },
+  "Walking Lunges": {
+    video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0/3o7TKSjRrfIPjeiVyM/giphy.gif", // Placeholder
+    steps: [
+      "Step forward with one leg.",
+      "Lower hips until both knees are at 90 degrees.",
+      "Back knee should hover just above ground.",
+      "Drive through front heel to bring back foot forward.",
+      "Repeat on other side."
+    ],
+    cues: [
+      "Torso upright.",
+      "Don't let front knee collapse inward.",
+      "Control the descent."
+    ]
+  },
+  "Leg Extension": {
+    video: "https://media.giphy.com/media/v1.Y2lkPTc5MGI3NjExM3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0M3B0/3o7TKDkDbK7jJ5k7qE/giphy.gif", // Placeholder
+    steps: [
+      "Adjust seat so knees align with pivot point.",
+      "Select appropriate weight.",
+      "Extend legs fully until straight.",
+      "Squeeze quads at the top.",
+      "Lower weight slowly under control."
+    ],
+    cues: [
+      "Don't kick the weight.",
+      "Keep butt in the seat.",
+      "Hold the peak contraction."
+    ]
+  }
+};
 
 export default function Dashboard() {
   const [completed, setCompleted] = useState<number[]>([]);
   const [selectedDate, setSelectedDate] = useState(new Date());
+  const [activeExercise, setActiveExercise] = useState<string | null>(null);
 
   // Mock dates for the calendar strip
   const dates = Array.from({ length: 7 }, (_, i) => {
@@ -50,6 +125,14 @@ export default function Dashboard() {
     { id: 2, name: "Incline DB Press", sets: "3", reps: "10", rpe: "8", rest: "120s", completed: true },
     { id: 3, name: "Lateral Raise", sets: "4", reps: "15", rpe: "10", rest: "60s", completed: true },
   ];
+
+  const getInstructions = (name: string) => {
+    return instructions[name] || { 
+      video: "", 
+      steps: ["Instructions not found."], 
+      cues: ["Focus on form."] 
+    };
+  };
 
   return (
     <div className="min-h-screen bg-background text-foreground font-mono selection:bg-accent selection:text-black flex flex-col">
@@ -85,9 +168,6 @@ export default function Dashboard() {
         {/* Sidebar / Biometrics (Left Panel) */}
         <aside className="lg:col-span-4 bg-secondary/20 p-6 space-y-8">
           
-          {/* Calendar Strip (Mobile only, usually. But let's put it here for now or in main content) */}
-          {/* Actually let's keep Sidebar for Bio and Main for Workout Context */}
-
           {/* Readiness Score */}
           <div className="border-2 border-black bg-white p-6 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)]">
             <div className="flex justify-between items-start mb-4">
@@ -242,8 +322,82 @@ export default function Dashboard() {
                     <div className="flex-1 p-4 md:p-6">
                       <div className="flex justify-between items-start mb-4">
                         <h3 className="font-display text-2xl font-bold uppercase">{exercise.name}</h3>
-                        <div className="text-xs font-mono border border-current px-2 py-0.5 opacity-50">
-                          ID: {exercise.id}0{exercise.id}
+                        <div className="flex items-center gap-2">
+                          <div className="text-xs font-mono border border-current px-2 py-0.5 opacity-50">
+                            ID: {exercise.id}0{exercise.id}
+                          </div>
+                          <Sheet>
+                            <SheetTrigger asChild>
+                              <button 
+                                onClick={() => setActiveExercise(exercise.name)}
+                                className="p-1 hover:bg-black hover:text-white rounded-none border border-transparent hover:border-black transition-all"
+                              >
+                                <Info size={16} />
+                              </button>
+                            </SheetTrigger>
+                            <SheetContent className="w-[400px] sm:w-[540px] border-l-2 border-black p-0">
+                              <div className="h-full bg-background flex flex-col">
+                                {/* Header */}
+                                <div className="p-6 border-b-2 border-black bg-black text-white">
+                                  <SheetHeader>
+                                    <SheetTitle className="text-3xl font-display font-black uppercase text-white tracking-tighter">
+                                      {activeExercise}
+                                    </SheetTitle>
+                                    <SheetDescription className="text-gray-400 font-mono text-xs uppercase tracking-widest">
+                                      Protocol Execution Guide
+                                    </SheetDescription>
+                                  </SheetHeader>
+                                </div>
+
+                                {/* Video Placeholder */}
+                                <div className="aspect-video bg-gray-100 border-b-2 border-black relative flex items-center justify-center overflow-hidden">
+                                   {/* In a real app, this would be a real video. For now, using a gray box or simple graphic */}
+                                   <Play size={48} className="opacity-20" />
+                                   <div className="absolute inset-0 bg-black/5"></div>
+                                </div>
+
+                                {/* Content */}
+                                <div className="flex-1 overflow-y-auto p-6 space-y-8 font-mono">
+                                  {activeExercise && (
+                                    <>
+                                      <div>
+                                        <h4 className="font-bold uppercase border-b-2 border-black pb-2 mb-4 flex items-center gap-2">
+                                          <Terminal size={16} /> Execution Protocol
+                                        </h4>
+                                        <ul className="space-y-3">
+                                          {getInstructions(activeExercise).steps.map((step, i) => (
+                                            <li key={i} className="flex gap-3 text-sm">
+                                              <span className="font-bold text-accent bg-black px-1.5 h-fit">{i + 1}</span>
+                                              <span className="leading-relaxed">{step}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+
+                                      <div className="bg-accent/10 border-2 border-accent p-4">
+                                        <h4 className="font-bold uppercase text-accent-foreground mb-3 flex items-center gap-2">
+                                          <Zap size={16} /> Neural Cues
+                                        </h4>
+                                        <ul className="space-y-2">
+                                           {getInstructions(activeExercise).cues.map((cue, i) => (
+                                            <li key={i} className="flex gap-2 text-sm items-center">
+                                              <ChevronRight size={14} className="text-accent" />
+                                              <span className="font-bold">{cue}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </>
+                                  )}
+                                </div>
+                                
+                                {/* Footer */}
+                                <div className="p-4 border-t-2 border-black bg-gray-50 text-xs font-bold text-center uppercase text-gray-400">
+                                  Iron_AI Database v2.4
+                                </div>
+                              </div>
+                            </SheetContent>
+                          </Sheet>
                         </div>
                       </div>
                       
