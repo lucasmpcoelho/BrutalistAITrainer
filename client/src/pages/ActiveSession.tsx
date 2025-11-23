@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   Activity, 
@@ -10,9 +10,10 @@ import {
   Maximize2,
   Play,
   Pause,
-  SkipForward
+  SkipForward,
+  Scan,
+  Eye
 } from "lucide-react";
-import { Progress } from "@/components/ui/progress";
 
 // Mock Data (Same as Dashboard for consistency)
 const workout = [
@@ -29,13 +30,23 @@ export default function ActiveSession() {
   const [isResting, setIsResting] = useState(false);
   const [restTimer, setRestTimer] = useState(0);
   const [sessionDuration, setSessionDuration] = useState(0);
+  const [arMode, setArMode] = useState(false);
   
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
 
+  const videoRef = useRef<HTMLVideoElement>(null);
   const currentExercise = workout[currentExerciseIdx];
   const isLastSet = currentSet === currentExercise.sets;
   const isLastExercise = currentExerciseIdx === workout.length - 1;
+
+  // Mock Camera Feed
+  useEffect(() => {
+    if (arMode && videoRef.current) {
+      // In real app, navigator.mediaDevices.getUserMedia
+      // Here we just show a placeholder or "Connecting..."
+    }
+  }, [arMode]);
 
   // Session Timer
   useEffect(() => {
@@ -54,7 +65,6 @@ export default function ActiveSession() {
       }, 1000);
     } else if (isResting && restTimer === 0) {
       setIsResting(false);
-      // Auto-advance logic could go here
     }
     return () => clearInterval(interval);
   }, [isResting, restTimer]);
@@ -66,22 +76,18 @@ export default function ActiveSession() {
   };
 
   const handleLogSet = () => {
-    // Here we would save the data
     setWeightInput("");
     setRepsInput("");
 
     if (isLastSet) {
       if (isLastExercise) {
-        // Finish Workout
-        setLocation("/dashboard"); // In real app, show summary first
+        setLocation("/dashboard");
       } else {
-        // Move to next exercise
         setCurrentExerciseIdx(prev => prev + 1);
         setCurrentSet(1);
         startRest();
       }
     } else {
-      // Move to next set
       setCurrentSet(prev => prev + 1);
       startRest();
     }
@@ -124,33 +130,88 @@ export default function ActiveSession() {
         <div className="h-2 bg-gray-200 w-full">
           <div 
             className="h-full bg-accent transition-all duration-500"
-            style={{ width: `${((currentExerciseIdx * 100) + ((currentSet / currentExercise.sets) * (100 / workout.length)))}%` }} // Rough progress calc
+            style={{ width: `${((currentExerciseIdx * 100) + ((currentSet / currentExercise.sets) * (100 / workout.length)))}%` }} 
           ></div>
         </div>
+
+        {/* AR Mode Overlay */}
+        {arMode && (
+          <div className="absolute inset-0 z-40 bg-black/90 flex flex-col">
+             <div className="flex-1 relative overflow-hidden">
+                {/* Mock Camera View */}
+                <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/50 flex items-center justify-center">
+                   <div className="w-full max-w-lg aspect-[9/16] border-2 border-accent/50 relative">
+                      {/* Bounding Box Mock */}
+                      <div className="absolute top-1/4 left-1/4 w-1/2 h-1/2 border border-accent corner-brackets"></div>
+                      <div className="absolute bottom-4 left-0 w-full text-center text-accent font-mono text-xs animate-pulse">
+                        SCANNING SKELETAL NODES...
+                      </div>
+                      
+                      {/* SVG Skeleton Overlay Mock */}
+                      <svg className="absolute inset-0 w-full h-full opacity-50" viewBox="0 0 100 100">
+                        <circle cx="50" cy="30" r="5" stroke="currentColor" fill="none" className="text-accent" />
+                        <line x1="50" y1="35" x2="50" y2="60" stroke="currentColor" className="text-accent" />
+                        <line x1="50" y1="40" x2="30" y2="50" stroke="currentColor" className="text-accent" />
+                        <line x1="50" y1="40" x2="70" y2="50" stroke="currentColor" className="text-accent" />
+                        <line x1="50" y1="60" x2="40" y2="80" stroke="currentColor" className="text-accent" />
+                        <line x1="50" y1="60" x2="60" y2="80" stroke="currentColor" className="text-accent" />
+                      </svg>
+                   </div>
+                </div>
+                
+                <button 
+                  onClick={() => setArMode(false)}
+                  className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full border border-white"
+                >
+                  <X size={24} />
+                </button>
+             </div>
+             <div className="p-6 bg-black text-white border-t border-white/20">
+               <h3 className="font-bold uppercase text-accent mb-2">Form Analysis Active</h3>
+               <p className="text-xs text-gray-400">
+                 Keep spine neutral. Depth looks good. Velocity is 0.45m/s (Optimal).
+               </p>
+             </div>
+          </div>
+        )}
 
         {/* Main Exercise View */}
         <div className="flex-1 flex flex-col p-4 md:p-8 max-w-3xl mx-auto w-full">
           
           {/* Exercise Header */}
-          <div className="mb-8">
-             <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-               Exercise {currentExerciseIdx + 1} of {workout.length}
+          <div className="mb-8 flex justify-between items-start">
+             <div>
+               <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
+                 Exercise {currentExerciseIdx + 1} of {workout.length}
+               </div>
+               <h1 className="font-display text-4xl md:text-6xl font-black uppercase leading-[0.9]">
+                 {currentExercise.name}
+               </h1>
              </div>
-             <h1 className="font-display text-4xl md:text-6xl font-black uppercase leading-[0.9]">
-               {currentExercise.name}
-             </h1>
-             <div className="mt-4 flex items-center gap-4 text-sm">
-               <div className="bg-black text-white px-3 py-1 font-bold">
-                 SET {currentSet} / {currentExercise.sets}
+             
+             {/* Vision Toggle */}
+             <button 
+               onClick={() => setArMode(true)}
+               className="flex flex-col items-center gap-1 text-[10px] font-bold uppercase text-gray-400 hover:text-accent transition-colors"
+             >
+               <div className="p-3 border-2 border-current rounded-full">
+                 <Scan size={24} />
                </div>
-               <div className="font-bold text-gray-500">
-                 TARGET: <span className="text-black">{currentExercise.reps} REPS</span>
-               </div>
-               <div className="font-bold text-gray-500">
-                 RPE: <span className="text-black">{currentExercise.rpe}</span>
-               </div>
-             </div>
+               <span>Form Check</span>
+             </button>
           </div>
+
+          <div className="mt-4 flex items-center gap-4 text-sm mb-8">
+             <div className="bg-black text-white px-3 py-1 font-bold">
+               SET {currentSet} / {currentExercise.sets}
+             </div>
+             <div className="font-bold text-gray-500">
+               TARGET: <span className="text-black">{currentExercise.reps} REPS</span>
+             </div>
+             <div className="font-bold text-gray-500">
+               RPE: <span className="text-black">{currentExercise.rpe}</span>
+             </div>
+           </div>
 
           {/* Data Entry Card */}
           <div className="border-2 border-black p-6 md:p-10 bg-white brutal-shadow-lg relative flex-1 flex flex-col justify-center">
