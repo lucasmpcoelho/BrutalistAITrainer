@@ -110,9 +110,9 @@ export default function Telemetry() {
              <span className="text-xl font-display font-black">82%</span>
            </div>
            <p className="text-[10px] font-mono leading-relaxed text-gray-500">
-             > BASELINE EXCEEDED.<br/>
-             > CNS PRIMED FOR HIGH INTENSITY.<br/>
-             > SUGGESTED LOAD: 90-95% 1RM.
+             &gt; BASELINE EXCEEDED.<br/>
+             &gt; CNS PRIMED FOR HIGH INTENSITY.<br/>
+             &gt; SUGGESTED LOAD: 90-95% 1RM.
            </p>
         </div>
 
