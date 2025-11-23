@@ -445,9 +445,11 @@ export default function Dashboard() {
             {/* Start Button */}
             {isToday && (
               <div className="mt-12 flex justify-end">
-                 <button className="bg-black text-white px-8 py-4 font-mono font-bold uppercase text-lg tracking-wider border-2 border-black hover:bg-accent hover:text-black transition-all flex items-center gap-2 brutal-shadow-lg hover:translate-y-1 hover:shadow-none">
-                   Begin Session <Play size={20} fill="currentColor" />
-                 </button>
+                 <Link href="/session">
+                   <a className="bg-black text-white px-8 py-4 font-mono font-bold uppercase text-lg tracking-wider border-2 border-black hover:bg-accent hover:text-black transition-all flex items-center gap-2 brutal-shadow-lg hover:translate-y-1 hover:shadow-none">
+                     Begin Session <Play size={20} fill="currentColor" />
+                   </a>
+                 </Link>
               </div>
             )}
 
