@@ -30,8 +30,11 @@ app.use(express.urlencoded({ extended: false }));
 
 app.use((req, res, next) => {
   const start = Date.now();
-  const path = req.path;
+  const reqPath = req.path;
   let capturedJsonResponse: Record<string, any> | undefined = undefined;
+
+  // Log ALL incoming requests for debugging
+  console.log(`[request] ${req.method} ${reqPath}`);
 
   const originalResJson = res.json;
   res.json = function (bodyJson, ...args) {
@@ -41,18 +44,17 @@ app.use((req, res, next) => {
 
   res.on("finish", () => {
     const duration = Date.now() - start;
-    if (path.startsWith("/api")) {
-      let logLine = `${req.method} ${path} ${res.statusCode} in ${duration}ms`;
-      if (capturedJsonResponse) {
-        logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
-      }
-
-      if (logLine.length > 80) {
-        logLine = logLine.slice(0, 79) + "…";
-      }
-
-      log(logLine);
+    // Log all requests, not just /api
+    let logLine = `${req.method} ${reqPath} ${res.statusCode} in ${duration}ms`;
+    if (capturedJsonResponse && reqPath.startsWith("/api")) {
+      logLine += ` :: ${JSON.stringify(capturedJsonResponse)}`;
     }
+
+    if (logLine.length > 80) {
+      logLine = logLine.slice(0, 79) + "…";
+    }
+
+    log(logLine);
   });
 
   next();
@@ -67,8 +69,9 @@ export default async function runApp(
     const status = err.status || err.statusCode || 500;
     const message = err.message || "Internal Server Error";
 
+    console.error(`[error-handler] Error: ${message}`, err);
     res.status(status).json({ message });
-    throw err;
+    // Note: Don't throw here - it crashes the process after sending response
   });
 
   // importantly run the final setup after setting up all the other routes so

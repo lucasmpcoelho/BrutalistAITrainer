@@ -54,13 +54,24 @@ export async function serveStatic(app: Express, server: Server) {
   }
 
   console.log(`[serveStatic] Serving static files from: ${distPath}`);
+  console.log(`[serveStatic] index.html path: ${indexPath}`);
+  
+  // Serve static files
   app.use(express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist (SPA routing)
-  app.get("*", (_req, res) => {
+  // SPA catch-all: serve index.html for all non-API, non-health routes
+  // This handles client-side routing
+  app.use((req, res, next) => {
+    // Skip API routes and health check
+    if (req.path.startsWith('/api') || req.path === '/health') {
+      return next();
+    }
+    
+    console.log(`[serveStatic] Serving index.html for: ${req.method} ${req.path}`);
+    
     res.sendFile(indexPath, (err) => {
       if (err) {
-        console.error(`[serveStatic] Error sending index.html:`, err);
+        console.error(`[serveStatic] Error sending index.html for ${req.path}:`, err);
         if (!res.headersSent) {
           res.status(500).send("Internal Server Error");
         }
