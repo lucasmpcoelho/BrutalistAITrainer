@@ -1,0 +1,613 @@
+# IRON_AI — Mobile UX Design System for AI Agents
+
+> **Purpose**: This document defines the design thinking framework, principles, and patterns that AI agents MUST internalize when building features for IRON_AI. Read this before writing any UI code.
+
+---
+
+## Part 1: Design Thinking Framework
+
+### The 5-Second Test
+
+Before implementing any feature, ask:
+
+1. **Can the user understand this in under 5 seconds?** — If explanation is needed, simplify.
+2. **Can this be used with one thumb?** — The user is at the gym, phone in one hand.
+3. **Does this feel powerful?** — Brutalist design celebrates strength, not softness.
+4. **Does this reward the user?** — Every interaction should acknowledge effort.
+5. **Would I use this mid-set?** — If it requires focus, it fails the gym test.
+
+### The Psychology of Fitness Apps
+
+Users come to IRON_AI in specific mental states. Design for these:
+
+| State | User Need | Design Response |
+|-------|-----------|-----------------|
+| **Pre-workout** | Motivation, clarity | Bold headlines, clear today's protocol |
+| **Mid-workout** | Speed, zero friction | Maximum touch targets, minimal choices |
+| **Post-workout** | Validation, reward | Celebration, progress visualization |
+| **Between sessions** | Curiosity, planning | Stats, streaks, upcoming workouts |
+
+---
+
+## Part 2: Foundational UX Laws
+
+### Fitts's Law
+> Time to reach a target = f(distance/size)
+
+**Application**:
+- Primary actions go in thumb-reachable zones
+- Bigger targets = faster interaction = better gym UX
+- Minimum touch target: **48px × 48px** (prefer **56px+** for gym use)
+
+### Hick's Law
+> Decision time increases with the number of choices
+
+**Application**:
+- Maximum 3-4 options per screen
+- Use progressive disclosure — hide advanced options
+- Pre-select smart defaults based on user history
+
+### Miller's Law
+> Working memory holds 7±2 items
+
+**Application**:
+- Group exercises into digestible sets
+- Maximum 5 items in any list before chunking
+- Use visual hierarchy to reduce cognitive load
+
+### Jakob's Law
+> Users spend most time on *other* apps
+
+**Application**:
+- Follow iOS/Android conventions for navigation
+- Swipe patterns should match platform expectations
+- Bottom navigation, not hamburger menus
+
+### The Aesthetic-Usability Effect
+> Beautiful things are perceived as easier to use
+
+**Application**:
+- Brutalist ≠ ugly. It's bold, confident, intentional
+- Strong typography and contrast creates perceived quality
+- Celebrate the monochrome — acid green accents for emphasis only
+
+---
+
+## Part 3: IRON_AI Design Language
+
+### Typography Hierarchy
+
+```
+DISPLAY (Headlines):     Space Grotesk Bold, 32-48px
+TITLES (Section heads):  Space Grotesk Semi, 20-28px  
+BODY (Content):          Inter Regular, 14-16px
+MONO (Data/Stats):       JetBrains Mono, 14-18px
+ACCENT (Labels):         Space Grotesk Medium, 12px uppercase
+```
+
+**Rules**:
+- Headlines should feel like they could be shouted
+- Use UPPERCASE sparingly — for labels and emphasis only
+- Monospace for anything numerical (weights, reps, timers)
+
+### Color System
+
+```css
+/* Primary Palette */
+--background:    #f5f5f5 (light) / #0d0d0d (dark)
+--foreground:    #0d0d0d (light) / #f5f5f5 (dark)
+--accent:        #ccff33 (Acid Green — celebration color)
+
+/* Usage Rules */
+- Black/White:   90% of UI
+- Acid Green:    10% — reserved for: achievements, PRs, active states, success
+- Never use gradients (anti-brutalist)
+- Never use soft shadows (use hard-edge brutal-shadow only)
+```
+
+### Component Patterns
+
+#### Buttons
+
+```tsx
+// Primary Action (e.g., "Start Workout", "Log Set")
+<button className="w-full min-h-[56px] bg-foreground text-background 
+  font-display font-bold text-lg uppercase tracking-wide
+  brutal-border brutal-shadow-hover touch-manipulation">
+  ACTION TEXT
+</button>
+
+// Secondary Action
+<button className="min-h-[48px] px-6 bg-transparent border-2 border-foreground
+  font-display font-medium uppercase tracking-wide
+  touch-manipulation">
+  SECONDARY
+</button>
+
+// Destructive/Cancel
+<button className="min-h-[48px] text-muted-foreground underline
+  font-sans text-sm">
+  Cancel
+</button>
+```
+
+#### Cards
+
+```tsx
+// Workout/Exercise Card
+<div className="p-4 bg-card brutal-border brutal-shadow
+  active:translate-x-[2px] active:translate-y-[2px] 
+  active:shadow-none transition-all">
+  {/* Content */}
+</div>
+```
+
+#### Inputs
+
+```tsx
+// Number Input (for weights, reps)
+<div className="flex items-center gap-2">
+  <button className="w-12 h-12 brutal-border text-xl font-mono">−</button>
+  <input 
+    type="text" 
+    inputMode="decimal"
+    className="w-20 h-12 text-center text-2xl font-mono brutal-border"
+  />
+  <button className="w-12 h-12 brutal-border text-xl font-mono">+</button>
+</div>
+```
+
+---
+
+## Part 4: Mobile-First Patterns
+
+### The Thumb Zone
+
+```
+┌─────────────────────┐
+│  😰 Hard to reach   │  ← Status info only, no actions
+├─────────────────────┤
+│                     │
+│  👍 Okay zone       │  ← Secondary actions, navigation
+│                     │
+├─────────────────────┤
+│  🎯 NATURAL ZONE    │  ← Primary actions, main content
+│                     │  ← This is where 80% of UX happens
+├─────────────────────┤
+│  [   BOTTOM NAV   ] │  ← Fixed navigation
+└─────────────────────┘
+```
+
+**Implementation**:
+- Place CTAs in bottom 40% of screen
+- Use bottom sheets instead of modals when possible
+- Fixed bottom action bars for primary workflows
+
+### Bottom Navigation
+
+```tsx
+// Standard bottom nav pattern
+<nav className="fixed bottom-0 inset-x-0 h-16 
+  bg-background brutal-border border-b-0 border-x-0
+  flex items-center justify-around
+  safe-area-bottom">
+  <NavItem icon={Home} label="Today" active />
+  <NavItem icon={TrendingUp} label="Stats" />
+  <NavItem icon={Trophy} label="Trophies" />
+  <NavItem icon={User} label="Profile" />
+</nav>
+
+// Each item
+<button className="flex flex-col items-center gap-1 px-4 py-2
+  touch-manipulation">
+  <Icon className={active ? "text-accent" : "text-muted-foreground"} />
+  <span className="text-xs font-medium">{label}</span>
+</button>
+```
+
+### Safe Areas
+
+Always account for device notches and home indicators:
+
+```tsx
+// Page container
+<div className="min-h-screen safe-area-top safe-area-bottom pb-20">
+  {/* Content — pb-20 accounts for bottom nav */}
+</div>
+
+// Fixed bottom elements
+<div className="fixed bottom-0 inset-x-0 safe-area-bottom">
+  {/* Sticky footer/CTA */}
+</div>
+```
+
+### Gesture Patterns
+
+| Gesture | Use Case | Implementation |
+|---------|----------|----------------|
+| **Tap** | Primary selection | Standard onClick |
+| **Long press** | Secondary options | 300ms delay, haptic feedback |
+| **Swipe left** | Delete/archive | Reveal danger action |
+| **Swipe right** | Complete/check | Reveal success action |
+| **Pull down** | Refresh | Pull-to-refresh pattern |
+| **Horizontal scroll** | Calendar, carousels | Scroll-snap with touch-pan-x |
+
+---
+
+## Part 5: Micro-interactions & Motion
+
+### Animation Principles
+
+1. **Purpose over decoration** — Every animation must serve UX
+2. **Quick and snappy** — 150-300ms max for UI transitions
+3. **Easing matters** — Use `ease-out` for entrances, `ease-in` for exits
+4. **Haptic pairing** — Significant actions trigger haptic feedback
+
+### Standard Durations
+
+```css
+--duration-instant: 100ms;   /* Button press feedback */
+--duration-fast:    150ms;   /* Hover states, toggles */
+--duration-normal:  250ms;   /* Page transitions, modals */
+--duration-slow:    400ms;   /* Celebrations, complex animations */
+```
+
+### Key Animations
+
+```tsx
+// Button press
+<button className="active:scale-95 transition-transform duration-100">
+
+// Card hover/focus
+<div className="hover:-translate-y-0.5 hover:brutal-shadow-lg 
+  transition-all duration-150">
+
+// Page entrance (stagger children)
+<motion.div 
+  initial={{ opacity: 0, y: 20 }}
+  animate={{ opacity: 1, y: 0 }}
+  transition={{ duration: 0.25 }}>
+
+// Success celebration (use sparingly)
+<motion.div
+  initial={{ scale: 0 }}
+  animate={{ scale: 1 }}
+  transition={{ type: "spring", stiffness: 500, damping: 25 }}>
+```
+
+### Haptic Feedback
+
+```typescript
+// Use the useHaptics hook for tactile feedback
+import { useHaptics } from "@/hooks/use-haptics";
+
+const { light, medium, heavy, success, error } = useHaptics();
+
+// When to use:
+light();    // Toggle, selection change
+medium();   // Button press, navigation
+heavy();    // Destructive action, major completion
+success();  // Achievement unlocked, PR hit
+error();    // Validation error, failed action
+```
+
+---
+
+## Part 6: Gamification UX Patterns
+
+### Achievement System
+
+```tsx
+// Achievement unlock notification (appears briefly, non-blocking)
+<motion.div 
+  initial={{ y: 100, opacity: 0 }}
+  animate={{ y: 0, opacity: 1 }}
+  exit={{ y: -100, opacity: 0 }}
+  className="fixed top-20 left-4 right-4 
+    bg-accent text-accent-foreground p-4 brutal-border">
+  <div className="flex items-center gap-3">
+    <Trophy className="w-8 h-8" />
+    <div>
+      <p className="text-xs uppercase tracking-wide">Achievement Unlocked</p>
+      <p className="font-display font-bold text-lg">First Blood</p>
+    </div>
+  </div>
+</motion.div>
+```
+
+### Personal Record (PR) Celebration
+
+```tsx
+// PR indicator during set logging
+{isPR && (
+  <motion.div 
+    initial={{ scale: 0 }}
+    animate={{ scale: 1 }}
+    className="absolute -top-2 -right-2 
+      bg-accent text-accent-foreground 
+      px-2 py-1 text-xs font-bold uppercase">
+    NEW PR!
+  </motion.div>
+)}
+
+// Post-set PR celebration (full screen moment)
+<motion.div className="fixed inset-0 bg-accent flex items-center justify-center">
+  <motion.div 
+    initial={{ scale: 0 }}
+    animate={{ scale: [0, 1.2, 1] }}
+    transition={{ duration: 0.5 }}>
+    <div className="text-center text-accent-foreground">
+      <p className="text-6xl font-display font-bold">🏆</p>
+      <p className="text-3xl font-display font-bold mt-4">NEW PR!</p>
+      <p className="text-xl font-mono mt-2">135 lbs × 8 reps</p>
+    </div>
+  </motion.div>
+</motion.div>
+```
+
+### Streak Display
+
+```tsx
+// Streak badge (always visible in header/profile)
+<div className="flex items-center gap-2 px-3 py-1 brutal-border bg-accent">
+  <Flame className="w-5 h-5" />
+  <span className="font-mono font-bold text-lg">{streak}</span>
+  <span className="text-xs uppercase">day streak</span>
+</div>
+```
+
+### Progress Indicators
+
+```tsx
+// Workout progress (sets completed)
+<div className="flex gap-1">
+  {sets.map((set, i) => (
+    <div 
+      key={i}
+      className={cn(
+        "w-3 h-3 brutal-border",
+        set.completed ? "bg-accent" : "bg-transparent"
+      )} 
+    />
+  ))}
+</div>
+
+// Session progress bar
+<div className="h-1 bg-muted">
+  <motion.div 
+    className="h-full bg-accent"
+    initial={{ width: 0 }}
+    animate={{ width: `${progress}%` }}
+  />
+</div>
+```
+
+---
+
+## Part 7: Accessibility Requirements
+
+### Minimum Standards
+
+1. **Color contrast**: 4.5:1 for text, 3:1 for large text
+2. **Touch targets**: 48×48px minimum (44×44px Apple, 48×48px Material)
+3. **Focus states**: Visible keyboard focus for all interactive elements
+4. **Screen readers**: Semantic HTML + ARIA labels
+5. **Motion**: Respect `prefers-reduced-motion`
+
+### Implementation
+
+```tsx
+// Accessible icon button
+<button 
+  aria-label="Add to favorites"
+  className="p-3 focus:ring-2 focus:ring-accent focus:outline-none">
+  <Heart className="w-6 h-6" aria-hidden="true" />
+</button>
+
+// Reduced motion
+<motion.div
+  animate={{ scale: 1.1 }}
+  transition={{ 
+    duration: prefersReducedMotion ? 0 : 0.2 
+  }}>
+```
+
+---
+
+## Part 8: Performance Guidelines
+
+### Image Optimization
+
+- Use WebP format with JPEG fallback
+- Lazy load images below the fold
+- Use appropriate srcset for different screen densities
+- Maximum initial image payload: 200KB
+
+### Animation Performance
+
+```css
+/* Only animate GPU-accelerated properties */
+.animate-safe {
+  will-change: transform, opacity;
+  /* Avoid: width, height, top, left, margin, padding */
+}
+```
+
+### Bundle Size
+
+- Lazy load pages with React.lazy()
+- Import icons individually, not entire icon libraries
+- Use CSS for simple animations before reaching for Framer Motion
+
+---
+
+## Part 9: Pre-Implementation Checklist
+
+Before writing any UI code, verify:
+
+### Design Questions
+- [ ] Does this follow the thumb zone principle?
+- [ ] Are all touch targets ≥48px?
+- [ ] Is the primary action in the bottom half of the screen?
+- [ ] Would this work during a rest period between sets?
+- [ ] Does this celebrate the user appropriately?
+
+### Technical Questions
+- [ ] Am I using the existing component library?
+- [ ] Am I following the established typography scale?
+- [ ] Am I using CSS variables for colors?
+- [ ] Have I added haptic feedback for significant actions?
+- [ ] Does this respect safe-area-inset for mobile devices?
+- [ ] Have I tested with both light and dark modes?
+
+### Brutalist Aesthetic Questions
+- [ ] Am I using sharp corners (border-radius: 0)?
+- [ ] Am I using the brutal-shadow utilities?
+- [ ] Am I avoiding gradients and soft shadows?
+- [ ] Is my use of color minimal (mostly B&W + accent)?
+- [ ] Does the typography feel bold and confident?
+
+---
+
+## Part 10: Anti-Patterns (What NOT to Do)
+
+### ❌ Design Anti-Patterns
+
+| Don't | Do Instead |
+|-------|------------|
+| Hamburger menu on mobile | Bottom navigation bar |
+| Modal dialogs for inputs | Bottom sheets |
+| Small touch targets | 48px+ buttons |
+| Horizontal scrolling lists without snap | scroll-snap-x mandatory |
+| Floating labels that animate | Static labels above inputs |
+| Skeleton loaders everywhere | Strategic placement only |
+| Auto-playing videos | User-initiated playback |
+| Swipe to navigate between main sections | Tab-based navigation |
+
+### ❌ Brutalist Anti-Patterns
+
+| Don't | Do Instead |
+|-------|------------|
+| Border radius > 0 | Sharp corners |
+| Drop shadows | Hard-edge brutal-shadow |
+| Gradients | Solid colors |
+| Thin fonts | Bold, confident weights |
+| Muted, pastel colors | High contrast B&W + accent |
+| Rounded buttons | Square with hard shadows |
+| Soft, floating elements | Grounded, bordered elements |
+
+### ❌ Mobile Anti-Patterns
+
+| Don't | Do Instead |
+|-------|------------|
+| Actions in top corners | Bottom of screen |
+| Tiny close buttons | Large, obvious dismiss |
+| Text inputs requiring typing | Selection, steppers, presets |
+| Hover-dependent interactions | Touch-first interactions |
+| Fixed position elements that overlap keyboard | Keyboard-aware layouts |
+| Landscape-only features | Portrait-first |
+
+---
+
+## Part 11: Reference Implementation
+
+### Component Example: Exercise Card
+
+```tsx
+import { cn } from "@/lib/utils";
+import { Check } from "lucide-react";
+
+interface ExerciseCardProps {
+  name: string;
+  sets: number;
+  completed: number;
+  isActive?: boolean;
+  onClick?: () => void;
+}
+
+export function ExerciseCard({
+  name,
+  sets,
+  completed,
+  isActive,
+  onClick
+}: ExerciseCardProps) {
+  const isComplete = completed >= sets;
+  
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        // Base styles
+        "w-full p-4 text-left brutal-border touch-manipulation",
+        "transition-all duration-150",
+        // State styles
+        isComplete && "bg-accent text-accent-foreground",
+        isActive && "brutal-shadow-lg -translate-x-1 -translate-y-1",
+        !isActive && !isComplete && "bg-card",
+        // Hover/Active
+        "active:translate-x-0.5 active:translate-y-0.5",
+        "active:shadow-none"
+      )}
+    >
+      <div className="flex items-center justify-between">
+        <div>
+          <h3 className="font-display font-bold text-lg uppercase">
+            {name}
+          </h3>
+          <p className="font-mono text-sm text-muted-foreground">
+            {completed} / {sets} sets
+          </p>
+        </div>
+        
+        {isComplete && (
+          <div className="w-8 h-8 flex items-center justify-center 
+            bg-accent-foreground text-accent brutal-border">
+            <Check className="w-5 h-5" />
+          </div>
+        )}
+      </div>
+      
+      {/* Progress dots */}
+      <div className="flex gap-1 mt-3">
+        {Array.from({ length: sets }).map((_, i) => (
+          <div
+            key={i}
+            className={cn(
+              "w-2 h-2 brutal-border border-current",
+              i < completed ? "bg-current" : "bg-transparent"
+            )}
+          />
+        ))}
+      </div>
+    </button>
+  );
+}
+```
+
+---
+
+## Summary: The IRON_AI Design Philosophy
+
+> **"Make the user feel like a champion, not a patient."**
+
+1. **Speed over safety** — Gym time is precious. Reduce taps.
+2. **Celebrate loudly** — PRs, streaks, and achievements deserve fanfare.
+3. **Brutalist confidence** — Bold, uncompromising, powerful aesthetics.
+4. **Thumb-first** — One-handed use is non-negotiable.
+5. **Progress visibility** — Users should always see how far they've come.
+
+When in doubt, ask: **"Would this make someone feel stronger?"**
+
+---
+
+## Sources & Inspiration
+
+- Apple Human Interface Guidelines (iOS design standards)
+- Google Material Design 3 (Android patterns)
+- Luke Wroblewski's Mobile First methodology
+- Don Norman's Design of Everyday Things (affordances, feedback)
+- Fitts's Law, Hick's Law, Miller's Law (cognitive psychology)
+- Brutalist web design movement (rawness, function over form)
+- STRONG, Hevy, Nike Training Club (fitness app benchmarks)
+

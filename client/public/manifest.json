@@ -1,0 +1,37 @@
+{
+  "name": "IRON_AI - The Raw Fitness Intelligence",
+  "short_name": "IRON_AI",
+  "description": "AI-driven fitness training. No bullshit. Pure performance. Brutally effective.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f5f5f5",
+  "theme_color": "#ccff33",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["health", "fitness", "lifestyle"],
+  "screenshots": [],
+  "shortcuts": [
+    {
+      "name": "Start Workout",
+      "short_name": "Workout",
+      "description": "Begin a new training session",
+      "url": "/session",
+      "icons": [{ "src": "/favicon.png", "sizes": "512x512" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your training protocol",
+      "url": "/dashboard",
+      "icons": [{ "src": "/favicon.png", "sizes": "512x512" }]
+    }
+  ]
+}
+

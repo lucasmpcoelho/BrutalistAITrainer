@@ -4,7 +4,7 @@ import {
   Activity, 
   Lock, 
   Zap,
-  Crosshair
+  Trophy
 } from "lucide-react";
 
 const features = [
@@ -19,9 +19,9 @@ const features = [
     desc: "Hardline integration with Apple Watch & wearables. We read your HRV and sleep data to prescribe the exact dosage of suffering for today.",
   },
   {
-    icon: Crosshair,
-    title: "Precision Form",
-    desc: "Computer vision analysis via your camera. Immediate audio feedback on spinal alignment and depth.",
+    icon: Trophy,
+    title: "Achievement System",
+    desc: "Unlock badges, track personal records, and build streaks. Every rep counts toward your legacy. Gamification that actually matters.",
   },
   {
     icon: Activity,

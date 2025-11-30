@@ -1,173 +1,360 @@
 import { useState, useEffect, useRef } from "react";
-import { Link, useLocation } from "wouter";
-import { Terminal, ArrowRight, Check, ChevronRight } from "lucide-react";
+import { useLocation } from "wouter";
+import { Terminal } from "lucide-react";
+import { useHaptics } from "@/hooks/use-haptics";
+
+// Question configuration for all 7 onboarding steps
+const ONBOARDING_QUESTIONS = [
+  {
+    id: "mission",
+    prompt: "What is your primary directive?",
+    systemPrefix: "INITIALIZING NEURAL LINK...\nBIOMETRIC SCAN: NEGATIVE.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "hypertrophy", label: "Build Muscle" },
+      { id: "strength", label: "Get Stronger" },
+      { id: "fat_loss", label: "Burn Fat" },
+      { id: "general", label: "General Fitness" },
+    ],
+  },
+  {
+    id: "frequency",
+    prompt: "How many days per week can you commit to suffering?",
+    systemPrefix: "ACKNOWLEDGED: {PREV} PROTOCOL SELECTED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "3", label: "3 Days" },
+      { id: "4", label: "4 Days" },
+      { id: "5", label: "5 Days" },
+      { id: "6", label: "6 Days" },
+    ],
+  },
+  {
+    id: "equipment",
+    prompt: "What hardware do you have access to?",
+    systemPrefix: "OPTIMAL FREQUENCY CALCULATED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "full_gym", label: "Full Gym" },
+      { id: "home_gym", label: "Home Gym" },
+      { id: "bodyweight", label: "Bodyweight Only" },
+    ],
+  },
+  {
+    id: "experience",
+    prompt: "How long have you been in the iron game?",
+    systemPrefix: "EQUIPMENT PROFILE LOADED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "beginner", label: "Fresh Meat (<1yr)" },
+      { id: "intermediate", label: "Intermediate (1-3yr)" },
+      { id: "advanced", label: "Veteran (3yr+)" },
+    ],
+  },
+  {
+    id: "injuries",
+    prompt: "Any damage I should know about?",
+    systemPrefix: "EXPERIENCE LEVEL INDEXED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "none", label: "None" },
+      { id: "upper", label: "Upper Body" },
+      { id: "lower", label: "Lower Body" },
+      { id: "back", label: "Back/Spine" },
+    ],
+  },
+  {
+    id: "session_length",
+    prompt: "How much time per session?",
+    systemPrefix: "INJURY PROTOCOL NOTED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "30", label: "30 min" },
+      { id: "45", label: "45 min" },
+      { id: "60", label: "60 min" },
+      { id: "90", label: "90 min+" },
+    ],
+  },
+  {
+    id: "style",
+    prompt: "What's your preferred suffering style?",
+    systemPrefix: "TIME ALLOCATION CONFIRMED.\n\n",
+    type: "options" as const,
+    options: [
+      { id: "traditional", label: "Traditional" },
+      { id: "supersets", label: "Supersets" },
+      { id: "circuits", label: "Circuits" },
+      { id: "surprise", label: "Surprise Me" },
+    ],
+  },
+];
 
 type Message = {
   id: number;
   text: string;
   sender: "system" | "user";
-  type?: "text" | "options" | "input";
-  options?: string[];
 };
 
-export default function Onboarding() {
-  const [location, setLocation] = useLocation();
-  const [step, setStep] = useState(0);
-  const [inputValue, setInputValue] = useState("");
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, text: "INITIALIZING NEURAL LINK...", sender: "system" },
-    { id: 2, text: "BIOMETRIC SCAN: NEGATIVE.", sender: "system" },
-    { id: 3, text: "Welcome to IRON_AI. I need to calibrate your baseline. What is your primary directive?", sender: "system", type: "options", options: ["Hypertrophy", "Strength", "Endurance", "Hybrid"] }
-  ]);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+// Typing indicator component
+function TypingIndicator() {
+  return (
+    <div className="flex items-start animate-in fade-in duration-200">
+      <div className="border border-green-900 bg-green-950/10 p-4">
+        <span className="text-[10px] uppercase opacity-50 block mb-2">IRON_AI CORE</span>
+        <div className="flex gap-1.5">
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:0ms]" />
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:150ms]" />
+          <span className="w-2 h-2 bg-green-500 rounded-full animate-bounce [animation-delay:300ms]" />
+        </div>
+      </div>
+    </div>
+  );
+}
 
-  const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  };
+// Completion celebration screen
+function CompletionScreen({ onContinue }: { onContinue: () => void }) {
+  const [showButton, setShowButton] = useState(false);
+  const { vibrate } = useHaptics();
 
   useEffect(() => {
-    scrollToBottom();
-  }, [messages]);
-
-  const handleOptionClick = (option: string) => {
-    const userMsg: Message = { id: Date.now(), text: option, sender: "user" };
-    setMessages(prev => [...prev, userMsg]);
+    // Trigger success haptic
+    vibrate("success");
     
-    // Simulate AI thinking and response
-    setTimeout(() => {
-      nextStep(option);
-    }, 600);
-  };
-
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputValue.trim()) return;
-    
-    const userMsg: Message = { id: Date.now(), text: inputValue, sender: "user" };
-    setMessages(prev => [...prev, userMsg]);
-    setInputValue("");
-    
-    setTimeout(() => {
-      nextStep(inputValue);
-    }, 600);
-  };
-
-  const nextStep = (lastAnswer: string) => {
-    let nextMsg: Message | null = null;
-
-    switch (step) {
-      case 0:
-        nextMsg = { 
-          id: Date.now() + 1, 
-          text: `ACKNOWLEDGED: ${lastAnswer.toUpperCase()} PROTOCOL SELECTED. How many days per week can you commit to suffering?`, 
-          sender: "system", 
-          type: "options", 
-          options: ["3 Days", "4 Days", "5 Days", "6 Days (Psychopath)"] 
-        };
-        break;
-      case 1:
-        nextMsg = { 
-          id: Date.now() + 1, 
-          text: "OPTIMAL FREQUENCY CALCULATED. Do you have access to a full commercial gym or limited equipment?", 
-          sender: "system", 
-          type: "options", 
-          options: ["Full Gym", "Home Gym", "Bodyweight Only"] 
-        };
-        break;
-      case 2:
-        nextMsg = { 
-          id: Date.now() + 1, 
-          text: "EQUIPMENT PROFILE LOADED. Last question: What is your current estimated 1RM for Squat (in kg)? Enter '0' if unknown.", 
-          sender: "system", 
-          type: "input" 
-        };
-        break;
-      case 3:
-        nextMsg = { 
-          id: Date.now() + 1, 
-          text: "CALIBRATION COMPLETE. GENERATING PROTOCOL v1.0...", 
-          sender: "system" 
-        };
-        setTimeout(() => {
-           setLocation("/dashboard");
-        }, 2000);
-        break;
-    }
-
-    if (nextMsg) {
-      setMessages(prev => [...prev, nextMsg]);
-      setStep(prev => prev + 1);
-    }
-  };
+    // Show button after animation
+    const timer = setTimeout(() => setShowButton(true), 1500);
+    return () => clearTimeout(timer);
+  }, [vibrate]);
 
   return (
-    <div className="min-h-screen bg-black text-green-500 font-mono p-4 md:p-8 flex flex-col">
+    <div className="fixed inset-0 bg-black flex flex-col items-center justify-center p-8 z-50 animate-in fade-in duration-500">
+      <div className="text-accent text-xs uppercase tracking-[0.5em] mb-4 animate-pulse">
+        CALIBRATION COMPLETE
+      </div>
+      
+      <h1 className="font-display text-5xl md:text-7xl font-black text-white text-center mb-8 animate-in slide-in-from-bottom-4 duration-700">
+        PROTOCOL<br/>GENERATED
+      </h1>
+      
+      {/* Animated progress bar */}
+      <div className="w-64 h-1 bg-green-900 mb-8 overflow-hidden">
+        <div 
+          className="h-full bg-accent transition-all duration-1000 ease-out"
+          style={{ 
+            width: '100%',
+            animation: 'grow 1s ease-out forwards'
+          }} 
+        />
+      </div>
+
+      {/* System readout summary */}
+      <div className="text-green-700 text-xs font-mono uppercase tracking-wider mb-8 text-center animate-in fade-in duration-500 delay-500">
+        <p>ALL SYSTEMS NOMINAL</p>
+        <p className="text-green-500 mt-1">READY FOR DEPLOYMENT</p>
+      </div>
+      
+      {showButton && (
+        <button 
+          onClick={() => {
+            vibrate("medium");
+            onContinue();
+          }}
+          className="bg-accent text-black px-8 py-4 font-bold uppercase tracking-widest 
+            hover:bg-white transition-colors touch-manipulation min-h-[56px]
+            animate-in fade-in slide-in-from-bottom-2 duration-300"
+        >
+          Initialize Training
+        </button>
+      )}
+    </div>
+  );
+}
+
+export default function Onboarding() {
+  const [, setLocation] = useLocation();
+  const [step, setStep] = useState(0);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [isTyping, setIsTyping] = useState(false);
+  const [isComplete, setIsComplete] = useState(false);
+  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { vibrate } = useHaptics();
+
+  const currentQuestion = ONBOARDING_QUESTIONS[step];
+  const totalSteps = ONBOARDING_QUESTIONS.length;
+
+  // Scroll to bottom when messages change
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, isTyping]);
+
+  // Initialize first question
+  useEffect(() => {
+    const firstQuestion = ONBOARDING_QUESTIONS[0];
+    const initialText = firstQuestion.systemPrefix + firstQuestion.prompt;
+    
+    setIsTyping(true);
+    const timer = setTimeout(() => {
+      setIsTyping(false);
+      setMessages([{ id: Date.now(), text: initialText, sender: "system" }]);
+    }, 800);
+    
+    return () => clearTimeout(timer);
+  }, []);
+
+  const handleOptionSelect = (optionId: string, optionLabel: string) => {
+    vibrate("light");
+    
+    // Store the answer
+    setAnswers(prev => ({ ...prev, [currentQuestion.id]: optionId }));
+    
+    // Add user message
+    const userMsg: Message = { id: Date.now(), text: optionLabel, sender: "user" };
+    setMessages(prev => [...prev, userMsg]);
+    
+    // Check if this was the last question
+    if (step >= totalSteps - 1) {
+      // Show completion screen after a brief delay
+      setTimeout(() => {
+        setIsComplete(true);
+      }, 600);
+      return;
+    }
+    
+    // Show typing indicator, then next question
+    setIsTyping(true);
+    setTimeout(() => {
+      const nextQuestion = ONBOARDING_QUESTIONS[step + 1];
+      let systemText = nextQuestion.systemPrefix || "";
+      
+      // Replace placeholder with previous answer if present
+      if (systemText.includes("{PREV}")) {
+        systemText = systemText.replace("{PREV}", optionLabel.toUpperCase());
+      }
+      
+      systemText += nextQuestion.prompt;
+      
+      setIsTyping(false);
+      setMessages(prev => [...prev, { id: Date.now() + 1, text: systemText, sender: "system" }]);
+      setStep(prev => prev + 1);
+    }, 500);
+  };
+
+  const handleComplete = () => {
+    // TODO: Save answers to backend/storage
+    console.log("Onboarding complete with answers:", answers);
+    setLocation("/dashboard");
+  };
+
+  if (isComplete) {
+    return <CompletionScreen onContinue={handleComplete} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-black text-green-500 font-mono flex flex-col">
       {/* Header */}
-      <header className="flex justify-between items-center border-b border-green-900 pb-4 mb-4">
+      <header className="flex justify-between items-center border-b border-green-900 p-4 safe-area-top">
         <div className="flex items-center gap-2">
           <Terminal size={20} />
-          <span className="font-bold tracking-widest">SYSTEM_CONFIG</span>
+          <span className="font-bold tracking-widest text-sm">SYSTEM_CONFIG</span>
         </div>
         <div className="text-xs text-green-800">
-          SECURE_CONNECTION_ESTABLISHED
+          SECURE_CONNECTION
         </div>
       </header>
 
-      {/* Chat Area */}
-      <div className="flex-1 overflow-y-auto space-y-6 max-w-3xl mx-auto w-full mb-20 pr-2">
-        {messages.map((msg) => (
-          <div key={msg.id} className={`flex flex-col ${msg.sender === "user" ? "items-end" : "items-start"}`}>
-            <div className={`max-w-[80%] p-4 border ${
-              msg.sender === "system" 
-                ? "border-green-900 bg-green-950/10 text-green-500 rounded-tr-lg rounded-br-lg rounded-bl-lg" 
-                : "border-white/20 bg-white/5 text-white rounded-tl-lg rounded-bl-lg rounded-br-lg"
-            }`}>
-              <span className="text-[10px] uppercase opacity-50 mb-1 block">
-                {msg.sender === "system" ? "IRON_AI CORE" : "SUBJECT #892"}
-              </span>
-              <p className="leading-relaxed">{msg.text}</p>
-            </div>
-
-            {/* Options Renderer */}
-            {msg.type === "options" && msg.options && (
-              <div className="mt-3 flex flex-wrap gap-2">
-                {msg.options.map((opt) => (
-                  <button
-                    key={opt}
-                    onClick={() => handleOptionClick(opt)}
-                    className="px-4 py-2 border border-green-700 hover:bg-green-500 hover:text-black transition-colors text-sm uppercase tracking-wider"
-                  >
-                    {">"} {opt}
-                  </button>
-                ))}
+      {/* Chat Area - Read-only message history */}
+      <div className="flex-1 overflow-y-auto px-4 pt-4 pb-56">
+        <div className="max-w-3xl mx-auto space-y-4">
+          {messages.map((msg) => (
+            <div 
+              key={msg.id} 
+              className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-200`}
+            >
+              <div className={`max-w-[85%] p-4 border ${
+                msg.sender === "system" 
+                  ? "border-green-900 bg-green-950/10 text-green-500" 
+                  : "border-white/20 bg-white/5 text-white"
+              }`}>
+                <span className="text-[10px] uppercase opacity-50 mb-1 block">
+                  {msg.sender === "system" ? "IRON_AI CORE" : "SUBJECT #892"}
+                </span>
+                <p className="leading-relaxed whitespace-pre-line">{msg.text}</p>
               </div>
-            )}
-          </div>
-        ))}
-        <div ref={messagesEndRef} />
+            </div>
+          ))}
+          
+          {isTyping && <TypingIndicator />}
+          
+          <div ref={messagesEndRef} />
+        </div>
       </div>
 
-      {/* Input Area (Only if needed) */}
-      {messages[messages.length - 1]?.type === "input" && (
-        <div className="fixed bottom-0 left-0 w-full bg-black border-t border-green-900 p-4">
-          <div className="max-w-3xl mx-auto">
-            <form onSubmit={handleInputSubmit} className="flex gap-2">
-              <span className="py-3 text-green-500">{">"}</span>
-              <input 
-                type="text" 
-                autoFocus
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                className="flex-1 bg-transparent border-none focus:ring-0 text-white font-mono text-lg outline-none placeholder-green-900"
-                placeholder="ENTER DATA..."
+      {/* Fixed Bottom Input Area */}
+      <div className="fixed bottom-0 inset-x-0 bg-black border-t-2 border-green-900 safe-area-bottom">
+        <div className="max-w-3xl mx-auto p-4">
+          {/* Progress indicator */}
+          <div className="flex items-center gap-3 mb-4">
+            <span className="text-green-700 text-xs font-bold">▸ STEP {step + 1}/{totalSteps}</span>
+            <div className="flex-1 h-0.5 bg-green-900 overflow-hidden">
+              <div 
+                className="h-full bg-green-500 transition-all duration-500 ease-out"
+                style={{ width: `${((step + 1) / totalSteps) * 100}%` }} 
               />
-              <button type="submit" className="text-green-500 hover:text-white">
-                <ArrowRight />
-              </button>
-            </form>
+            </div>
+            {/* Step dots */}
+            <div className="flex gap-1">
+              {ONBOARDING_QUESTIONS.map((_, i) => (
+                <div 
+                  key={i} 
+                  className={`w-1.5 h-1.5 border border-green-700 transition-colors duration-300 ${
+                    i <= step ? 'bg-green-500' : 'bg-transparent'
+                  }`} 
+                />
+              ))}
+            </div>
           </div>
+          
+          {/* Options Grid */}
+          {currentQuestion && !isTyping && (
+            <div 
+              className={`grid gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                currentQuestion.options.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'
+              }`}
+            >
+              {currentQuestion.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleOptionSelect(opt.id, opt.label)}
+                  className="min-h-[56px] px-4 py-3 border-2 border-green-700 
+                    hover:bg-green-500 hover:text-black active:bg-green-400
+                    transition-colors duration-150
+                    text-sm uppercase tracking-wider font-bold
+                    touch-manipulation
+                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black"
+                >
+                  <span className="text-green-700 mr-2">▸</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+          
+          {/* Show waiting state while typing */}
+          {isTyping && (
+            <div className="text-center text-green-700 text-xs uppercase tracking-wider py-4 animate-pulse">
+              Processing...
+            </div>
+          )}
         </div>
-      )}
+      </div>
+
+      {/* CSS for grow animation */}
+      <style>{`
+        @keyframes grow {
+          from { width: 0%; }
+          to { width: 100%; }
+        }
+      `}</style>
     </div>
   );
 }

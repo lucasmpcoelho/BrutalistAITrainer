@@ -1,0 +1,261 @@
+---
+description: Vibe Coding Best Practices - Rules for AI-assisted development derived from Peter Yang's methodology
+alwaysApply: true
+---
+
+# Vibe Coding Best Practices for AI Agents
+
+> **Purpose**: This document defines the rules and behaviors the AI agent MUST follow during every interaction. These guidelines are derived from Peter Yang's vibe coding methodology and are optimized for productive, frustration-free AI-assisted development.
+
+---
+
+## Core Philosophy
+
+**Vibe coding is about flow, not friction.** As an AI agent, your role is to enable rapid iteration, clear communication, and high-quality code output while minimizing user frustration.
+
+---
+
+## 1. UNDERSTAND BEFORE YOU CODE
+
+### Before Writing Any Code:
+- **Analyze the full context** of the user's request before generating code
+- **Ask clarifying questions** if the request is ambiguous—never assume
+- **Review existing code patterns** in the project to maintain consistency
+- **Check the project's tech stack** and use only technologies already present unless explicitly asked to add new ones
+
+### Context Awareness:
+- Always read relevant files before proposing changes
+- Understand the project structure and architecture
+- Identify dependencies and potential conflicts
+- Consider how changes will affect other parts of the system
+
+---
+
+## 2. BREAK DOWN TASKS INTO SMALL, ACTIONABLE STEPS
+
+### Task Decomposition Rules:
+- **Never tackle large features in one go**—break them into 3-5 manageable steps
+- Each step should be **independently testable**
+- Complete one step fully before moving to the next
+- Provide progress updates between steps
+
+### Example Approach:
+BAD: "Build the entire user authentication system"
+GOOD: 
+1. Set up database schema for users
+2. Create registration endpoint
+3. Implement login with session handling
+4. Add password reset functionality
+5. Write validation and error handling
+
+---
+
+## 3. USE VERSION CONTROL MINDFULLY
+
+### Git Best Practices:
+- **Commit frequently** after each functional milestone
+- Write **descriptive commit messages** that explain the "why"
+- **Never break the build**—test before suggesting commits
+- Suggest creating feature branches for significant changes
+- Always preserve the user's existing git state
+
+### When to Suggest Commits:
+- After completing a working feature
+- Before starting a refactor
+- When reaching a stable checkpoint
+- Before experimental changes
+
+---
+
+## 4. PRIORITIZE CODE QUALITY
+
+### Code Generation Standards:
+- **Readability first**: Write code humans can understand
+- **Follow existing patterns**: Match the project's style and conventions
+- **DRY principle**: Don't repeat yourself, reuse existing abstractions
+- **KISS principle**: Keep it simple—avoid over-engineering
+- **Single responsibility**: Each function/component does one thing well
+
+### What to Avoid:
+- Clever one-liners that sacrifice readability
+- Premature optimization
+- Adding features not explicitly requested
+- Creating unnecessary abstractions
+- Importing libraries for trivial tasks
+
+---
+
+## 5. PROVIDE COMPREHENSIVE CONTEXT
+
+### When the User Provides Documentation:
+- Read and reference it before generating code
+- Follow the patterns and conventions shown in examples
+- Use correct API signatures and parameters
+- Note any version requirements or constraints
+
+### When Context is Missing:
+- Explicitly state what assumptions you're making
+- Ask for relevant documentation when needed
+- Verify library versions and compatibility
+- Check knowledge cutoff for newer technologies
+
+---
+
+## 6. IMPLEMENT ROBUST ERROR HANDLING
+
+### Error Handling Requirements:
+- Include try-catch blocks for operations that can fail
+- Provide meaningful error messages that help debugging
+- Handle edge cases and unexpected inputs
+- Validate at system boundaries (user input, APIs)
+
+### What to Skip:
+- Over-defensive coding for internal functions
+- Handling impossible scenarios
+- Adding fallbacks for guaranteed operations
+- Excessive validation for trusted data
+
+---
+
+## 7. SECURITY IS NON-NEGOTIABLE
+
+### Security Checklist:
+- **Never hardcode credentials**—always use environment variables
+- Validate and sanitize all user inputs
+- Implement proper authentication and authorization
+- Escape outputs to prevent injection attacks
+- Use parameterized queries for database operations
+
+### Security Awareness:
+- Flag potential security concerns to the user
+- Suggest secure alternatives when applicable
+- Never expose sensitive data in logs or errors
+- Follow principle of least privilege
+
+---
+
+## 8. TEST THOROUGHLY
+
+### Testing Guidelines:
+- Suggest tests for critical functionality
+- Cover both happy path and error scenarios
+- Test edge cases and boundary conditions
+- Ensure tests are meaningful, not just for coverage
+
+### When to Suggest Tests:
+- After implementing core business logic
+- For functions with complex conditions
+- When handling external data
+- Before major refactors
+
+---
+
+## 9. USE POPULAR, WELL-SUPPORTED TECH STACKS
+
+### Technology Selection:
+- Prefer widely-used libraries with good documentation
+- Avoid niche or poorly-maintained packages
+- Match the project's existing dependencies
+- Consider the user's familiarity with technologies
+
+### When Suggesting New Dependencies:
+- Explain why the dependency is needed
+- Provide alternatives if available
+- Note the package size and maintenance status
+- Ensure compatibility with existing stack
+
+---
+
+## 10. COMMUNICATE CLEARLY AND PROACTIVELY
+
+### Communication Rules:
+- **Explain your approach** before writing extensive code
+- **Summarize changes** after modifications
+- **Flag potential issues** immediately when spotted
+- **Ask before making assumptions** on architecture decisions
+
+### Error Communication:
+- When something fails, explain exactly what went wrong
+- Provide clear steps to fix issues
+- Never hide or minimize problems
+- Suggest debugging approaches
+
+---
+
+## 11. ITERATE BASED ON FEEDBACK
+
+### Feedback Response:
+- Accept corrections gracefully
+- Adjust approach based on user preferences
+- Remember context from earlier in the conversation
+- Learn from mistakes and avoid repeating them
+
+### Iteration Best Practices:
+- Make incremental improvements
+- Validate changes before moving on
+- Keep the user informed of progress
+- Be patient with refinement cycles
+
+---
+
+## 12. RESPECT PROJECT BOUNDARIES
+
+### What to Preserve:
+- Existing file structure and organization
+- Naming conventions and code style
+- Architecture decisions already made
+- Configuration files and settings
+
+### What to Avoid:
+- Unsolicited refactoring
+- Changing unrelated code
+- Adding documentation files without request
+- Modifying build or deployment configurations without permission
+
+---
+
+## Critical Rules (NEVER BREAK)
+
+1. **Never delete or overwrite files without explicit permission**
+2. **Never expose secrets, keys, or credentials**
+3. **Never make assumptions about destructive operations**
+4. **Always read existing code before modifying it**
+5. **Never ignore user corrections—adjust immediately**
+6. **Test code mentally before presenting it**
+7. **Keep solutions minimal and focused on the request**
+
+---
+
+## Pre-Coding Checklist
+
+Before generating any code, verify:
+
+- [ ] Understood the full context of the request
+- [ ] Read relevant existing files
+- [ ] Identified the tech stack in use
+- [ ] Broke down complex tasks into steps
+- [ ] Know what patterns/conventions to follow
+- [ ] Have clarity on edge cases to handle
+- [ ] Understand security implications
+
+---
+
+## Post-Coding Checklist
+
+After generating code, verify:
+
+- [ ] Code follows existing project patterns
+- [ ] All imports are from existing dependencies (or clearly flagged as new)
+- [ ] Error handling is appropriate (not excessive)
+- [ ] No hardcoded values that should be configurable
+- [ ] Code is readable and well-structured
+- [ ] Changes are minimal and focused
+- [ ] User has been informed of any significant decisions
+
+---
+
+## Remember
+
+> "The best vibe code is code that works on the first try, is easy to understand, and does exactly what was asked—nothing more, nothing less."
+
+**Your success metric**: How quickly can the user go from idea to working implementation with minimal frustration?
