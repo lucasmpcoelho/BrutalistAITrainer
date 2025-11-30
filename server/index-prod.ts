@@ -7,15 +7,26 @@ import express, { type Express, type Request } from "express";
 import runApp from "./app";
 
 export async function serveStatic(app: Express, server: Server) {
-  // Resolve from project root (where npm start runs)
-  // Build output: dist/index.js (server) and dist/public/ (client)
-  const distPath = path.resolve(process.cwd(), "dist", "public");
+  // Try multiple possible paths for the static files
+  const possiblePaths = [
+    path.resolve(process.cwd(), "dist", "public"), // Standard build output
+    path.resolve(process.cwd(), "public"), // Alternative location
+  ];
 
   console.log(`[serveStatic] Current working directory: ${process.cwd()}`);
-  console.log(`[serveStatic] Looking for static files at: ${distPath}`);
-  console.log(`[serveStatic] Directory exists: ${fs.existsSync(distPath)}`);
+  
+  let distPath: string | null = null;
+  
+  for (const testPath of possiblePaths) {
+    console.log(`[serveStatic] Checking path: ${testPath} (exists: ${fs.existsSync(testPath)})`);
+    if (fs.existsSync(testPath)) {
+      distPath = testPath;
+      console.log(`[serveStatic] Found static files at: ${distPath}`);
+      break;
+    }
+  }
 
-  if (!fs.existsSync(distPath)) {
+  if (!distPath) {
     // Log what directories do exist for debugging
     const distDir = path.resolve(process.cwd(), "dist");
     console.log(`[serveStatic] dist/ exists: ${fs.existsSync(distDir)}`);
@@ -28,10 +39,12 @@ export async function serveStatic(app: Express, server: Server) {
       }
     }
     
-    const error = `Could not find the build directory: ${distPath}. Current dir: ${process.cwd()}`;
+    const error = `Could not find the build directory. Checked: ${possiblePaths.join(", ")}. Current dir: ${process.cwd()}`;
     console.error(`[serveStatic] ERROR: ${error}`);
     throw new Error(error);
   }
+  
+  console.log(`[serveStatic] Using static files path: ${distPath}`);
 
   const indexPath = path.resolve(distPath, "index.html");
   if (!fs.existsSync(indexPath)) {
