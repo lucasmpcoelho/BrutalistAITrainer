@@ -1,5 +1,8 @@
 # Nixpacks configuration for Railway
-# Disable Caddy - we use our own Express server
+# This ensures we use Node.js directly without Caddy proxy
+
+# Only use Node.js provider
+providers = ["node"]
 
 [phases.setup]
 nixPkgs = ["nodejs_18", "npm-9_x"]
@@ -12,9 +15,3 @@ cmds = ["npm run build"]
 
 [start]
 cmd = "npm start"
-
-# Explicitly disable static file serving via Caddy
-# Our Express server handles everything
-[staticAssets]
-enable = false
-
