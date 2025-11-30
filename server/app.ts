@@ -87,10 +87,9 @@ export default async function runApp(
   console.log(`[runApp] Starting server on port ${port}`);
   console.log(`[runApp] PORT env var: ${process.env.PORT || 'not set (using default 5000)'}`);
   
-  // Note: We are NOT passing "0.0.0.0" as the host argument.
-  // This allows Node.js to accept connections on both IPv4 (0.0.0.0) and IPv6 (::).
-  // Railway's load balancer may communicate via IPv6, so this is safer.
-  server.listen(port, () => {
+  // Note: Explicitly binding to 0.0.0.0 is required for Docker/Railway
+  // This ensures we listen on all IPv4 interfaces, not just localhost
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
     const address = server.address();
     console.log(`[runApp] Server successfully started and listening on port ${port}`);
