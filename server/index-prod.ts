@@ -10,22 +10,25 @@ export async function serveStatic(app: Express, server: Server) {
   // Resolve from project root (where npm start runs)
   // Build output: dist/index.js (server) and dist/public/ (client)
   const distPath = path.resolve(process.cwd(), "dist", "public");
-  
+
   console.log(`[serveStatic] Current working directory: ${process.cwd()}`);
   console.log(`[serveStatic] Looking for static files at: ${distPath}`);
   console.log(`[serveStatic] Directory exists: ${fs.existsSync(distPath)}`);
-  
-  if (fs.existsSync(distPath)) {
-    const files = fs.readdirSync(distPath);
-    console.log(`[serveStatic] Files in dist/public: ${files.join(", ")}`);
-  } else {
-    // Try alternative paths
-    const altPath1 = path.resolve(process.cwd(), "public");
-    console.log(`[serveStatic] Trying alternative path 1: ${altPath1} (exists: ${fs.existsSync(altPath1)})`);
-  }
 
   if (!fs.existsSync(distPath)) {
-    const error = `Could not find the build directory: ${distPath}, make sure to build the client first. Current dir: ${process.cwd()}`;
+    // Log what directories do exist for debugging
+    const distDir = path.resolve(process.cwd(), "dist");
+    console.log(`[serveStatic] dist/ exists: ${fs.existsSync(distDir)}`);
+    if (fs.existsSync(distDir)) {
+      try {
+        const distContents = fs.readdirSync(distDir);
+        console.log(`[serveStatic] Contents of dist/: ${distContents.join(", ")}`);
+      } catch (e) {
+        console.log(`[serveStatic] Could not read dist/: ${e}`);
+      }
+    }
+    
+    const error = `Could not find the build directory: ${distPath}. Current dir: ${process.cwd()}`;
     console.error(`[serveStatic] ERROR: ${error}`);
     throw new Error(error);
   }
@@ -38,28 +41,26 @@ export async function serveStatic(app: Express, server: Server) {
   }
 
   console.log(`[serveStatic] Serving static files from: ${distPath}`);
-  
-  // Serve static files
-  app.use(express.static(distPath, {
-    index: false, // Don't serve index.html automatically, we'll handle it in catch-all
-  }));
+  app.use(express.static(distPath));
 
-  // Fall through to index.html for all routes (SPA routing)
-  app.get("*", (_req, res) => {
-    console.log(`[serveStatic] Catch-all route hit for: ${_req.originalUrl}`);
+  // fall through to index.html if the file doesn't exist
+  app.use("*", (_req, res) => {
     res.sendFile(indexPath, (err) => {
       if (err) {
         console.error(`[serveStatic] Error sending index.html:`, err);
         if (!res.headersSent) {
           res.status(500).send("Internal Server Error");
         }
-      } else {
-        console.log(`[serveStatic] Successfully sent index.html for: ${_req.originalUrl}`);
       }
     });
   });
 }
 
 (async () => {
-  await runApp(serveStatic);
+  try {
+    await runApp(serveStatic);
+  } catch (error) {
+    console.error("[index-prod] Fatal error starting server:", error);
+    process.exit(1);
+  }
 })();
