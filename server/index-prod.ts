@@ -38,15 +38,23 @@ export async function serveStatic(app: Express, server: Server) {
   }
 
   console.log(`[serveStatic] Serving static files from: ${distPath}`);
-  app.use(express.static(distPath));
+  
+  // Serve static files
+  app.use(express.static(distPath, {
+    index: false, // Don't serve index.html automatically, we'll handle it in catch-all
+  }));
 
-  // fall through to index.html if the file doesn't exist
-  app.use("*", (_req, res) => {
+  // Fall through to index.html for all routes (SPA routing)
+  app.get("*", (_req, res) => {
     console.log(`[serveStatic] Catch-all route hit for: ${_req.originalUrl}`);
     res.sendFile(indexPath, (err) => {
       if (err) {
         console.error(`[serveStatic] Error sending index.html:`, err);
-        res.status(500).send("Internal Server Error");
+        if (!res.headersSent) {
+          res.status(500).send("Internal Server Error");
+        }
+      } else {
+        console.log(`[serveStatic] Successfully sent index.html for: ${_req.originalUrl}`);
       }
     });
   });
