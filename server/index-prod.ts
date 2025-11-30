@@ -7,7 +7,9 @@ import express, { type Express, type Request } from "express";
 import runApp from "./app";
 
 export async function serveStatic(app: Express, server: Server) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // Resolve from project root (where npm start runs)
+  // Build output: dist/index.js (server) and dist/public/ (client)
+  const distPath = path.resolve(process.cwd(), "dist", "public");
 
   if (!fs.existsSync(distPath)) {
     throw new Error(
