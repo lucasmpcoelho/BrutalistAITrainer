@@ -71,9 +71,19 @@ export async function serveStatic(app: Express, server: Server) {
 
 (async () => {
   try {
+    console.log("[index-prod] Starting production server...");
+    console.log(`[index-prod] NODE_ENV: ${process.env.NODE_ENV}`);
+    console.log(`[index-prod] PORT: ${process.env.PORT || 'not set'}`);
+    console.log(`[index-prod] Working directory: ${process.cwd()}`);
+    
     await runApp(serveStatic);
+    
+    console.log("[index-prod] Server startup completed successfully");
   } catch (error) {
     console.error("[index-prod] Fatal error starting server:", error);
+    if (error instanceof Error) {
+      console.error("[index-prod] Error stack:", error.stack);
+    }
     process.exit(1);
   }
 })();

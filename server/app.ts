@@ -80,11 +80,19 @@ export default async function runApp(
   // this serves both the API and the client.
   // It is the only port that is not firewalled.
   const port = parseInt(process.env.PORT || '5000', 10);
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  
+  console.log(`[runApp] Starting server on port ${port}`);
+  console.log(`[runApp] PORT env var: ${process.env.PORT || 'not set (using default 5000)'}`);
+  
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
+    console.log(`[runApp] Server successfully started and listening on port ${port}`);
+  });
+  
+  server.on('error', (err: any) => {
+    console.error(`[runApp] Server error:`, err);
+    if (err.code === 'EADDRINUSE') {
+      console.error(`[runApp] Port ${port} is already in use`);
+    }
   });
 }
