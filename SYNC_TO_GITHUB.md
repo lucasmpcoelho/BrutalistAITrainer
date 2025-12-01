@@ -82,3 +82,4 @@ git remote set-url origin https://github.com/YOUR_USERNAME/YOUR_REPO.git
 - **GitHub Remote**: `origin` → `https://github.com/lucasmpcoelho/BrutalistAITrainer.git`
 - **Backup Remote**: `gitsafe-backup` → `git://gitsafe:5418/backup.git`
 
+

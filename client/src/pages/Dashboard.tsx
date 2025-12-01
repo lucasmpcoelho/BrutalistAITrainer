@@ -1,122 +1,416 @@
-import { 
-  Activity, 
-  Battery, 
-  Clock, 
-  Cpu, 
-  Dumbbell, 
-  Heart, 
-  Maximize2, 
-  Play, 
-  CheckSquare, 
-  Terminal,
-  TrendingUp,
-  Zap,
-  Calendar,
-  ChevronLeft,
-  ChevronRight,
-  Info
-} from "lucide-react";
 import { useState } from "react";
 import { Link } from "wouter";
-import Telemetry from "@/components/dashboard/Telemetry";
-import ProtocolCircuit from "@/components/dashboard/ProtocolCircuit";
+import { 
+  ChevronRight, 
+  ChevronDown,
+  ChevronUp,
+  Check,
+  Minus,
+  Dumbbell,
+  Zap,
+  Clock,
+  RefreshCw,
+  SkipForward,
+  BookOpen
+} from "lucide-react";
+import AppHeader from "@/components/AppHeader";
+import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
+import SkipConfirmSheet from "@/components/SkipConfirmSheet";
+import SwapExerciseSheet from "@/components/SwapExerciseSheet";
+import { useHaptics } from "@/hooks/use-haptics";
+import { 
+  EXERCISES, 
+  getExercise, 
+  getAlternatives, 
+  nameToId,
+  type ExerciseData 
+} from "@/data/exercises";
+
+// Mock week data with workout info
+const WEEK_DATA = [
+  { day: "Mon", date: 25, type: "PUSH", completed: true, muscles: ["Chest", "Shoulders", "Triceps"] },
+  { day: "Tue", date: 26, type: "PULL", completed: true, muscles: ["Back", "Biceps"] },
+  { day: "Wed", date: 27, type: "LEGS", completed: false, isToday: true, muscles: ["Quads", "Hamstrings", "Glutes"] },
+  { day: "Thu", date: 28, type: "REST", completed: false, muscles: [] },
+  { day: "Fri", date: 29, type: "PUSH", completed: false, muscles: ["Chest", "Shoulders", "Triceps"] },
+  { day: "Sat", date: 30, type: "PULL", completed: false, muscles: ["Back", "Biceps"] },
+  { day: "Sun", date: 1, type: "REST", completed: false, muscles: [] },
+];
+
+// Exercise type for workout
+interface WorkoutExercise {
+  id: number;
+  exerciseId: string;
+  name: string;
+  sets: number;
+  reps: string;
+  load: string;
+  type: "compound" | "accessory" | "isolation";
+}
+
+// Initial workout data
+const INITIAL_EXERCISES: WorkoutExercise[] = [
+  { id: 1, exerciseId: "barbell-squat", name: "Barbell Squat", sets: 3, reps: "5", load: "142.5kg", type: "compound" },
+  { id: 2, exerciseId: "romanian-deadlift", name: "Romanian Deadlift", sets: 3, reps: "8", load: "110kg", type: "compound" },
+  { id: 3, exerciseId: "walking-lunges", name: "Walking Lunges", sets: 3, reps: "12", load: "24kg", type: "accessory" },
+  { id: 4, exerciseId: "leg-extension", name: "Leg Extension", sets: 4, reps: "15", load: "65kg", type: "isolation" },
+];
 
 export default function Dashboard() {
-  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [weekExpanded, setWeekExpanded] = useState(false);
+  const [exercises, setExercises] = useState<WorkoutExercise[]>(INITIAL_EXERCISES);
+  const { vibrate } = useHaptics();
 
-  // Mock dates for the calendar strip
-  const dates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - 3 + i);
-    return d;
-  });
-  
-  const isToday = selectedDate.toDateString() === new Date().toDateString();
+  // Sheet states
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [skipOpen, setSkipOpen] = useState(false);
+  const [swapOpen, setSwapOpen] = useState(false);
+  const [selectedExercise, setSelectedExercise] = useState<WorkoutExercise | null>(null);
+
+  const todayData = WEEK_DATA.find(d => d.isToday);
+  const completedDays = WEEK_DATA.filter(d => d.completed).length;
+  const workoutDays = WEEK_DATA.filter(d => d.type !== "REST").length;
+
+  // Calculate workout stats
+  const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
+  const duration = `~${Math.round(totalSets * 4)} min`;
+
+  // Get exercise data from database
+  const getExerciseData = (exerciseId: string): ExerciseData | undefined => {
+    return EXERCISES[exerciseId];
+  };
+
+  // Action handlers
+  const handleNotesClick = (exercise: WorkoutExercise) => {
+    vibrate("light");
+    setSelectedExercise(exercise);
+    setNotesOpen(true);
+  };
+
+  const handleSkipClick = (exercise: WorkoutExercise) => {
+    vibrate("light");
+    setSelectedExercise(exercise);
+    setSkipOpen(true);
+  };
+
+  const handleSwapClick = (exercise: WorkoutExercise) => {
+    vibrate("light");
+    setSelectedExercise(exercise);
+    setSwapOpen(true);
+  };
+
+  const handleSkip = () => {
+    if (!selectedExercise) return;
+    setExercises(exercises.filter(ex => ex.id !== selectedExercise.id));
+    vibrate("success");
+  };
+
+  const handleSwapInstead = () => {
+    // Close skip sheet and open swap sheet
+    setSkipOpen(false);
+    setTimeout(() => setSwapOpen(true), 200);
+  };
+
+  const handleSwap = (newExercise: ExerciseData) => {
+    if (!selectedExercise) return;
+    setExercises(exercises.map(ex => 
+      ex.id === selectedExercise.id
+        ? {
+            ...ex,
+            exerciseId: newExercise.id,
+            name: newExercise.name,
+            type: newExercise.type,
+          }
+        : ex
+    ));
+    vibrate("success");
+  };
+
+  // Get current exercise data and alternatives
+  const currentExerciseData = selectedExercise 
+    ? getExerciseData(selectedExercise.exerciseId) 
+    : null;
+  const alternatives = selectedExercise 
+    ? getAlternatives(selectedExercise.exerciseId) 
+    : [];
 
   return (
-    <div className="min-h-screen bg-background text-foreground font-mono selection:bg-accent selection:text-black flex flex-col">
-      {/* Top Status Bar */}
-      <header className="border-b-2 border-black bg-black text-white p-4 flex justify-between items-center sticky top-0 z-50">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <a className="font-display font-bold text-xl tracking-tighter hover:text-accent transition-colors">IRON_AI</a>
-          </Link>
-          <div className="hidden md:flex items-center gap-2 text-xs text-gray-400 border-l border-gray-700 pl-4">
-            <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-            SYSTEM ONLINE
-          </div>
-        </div>
+    <div className="min-h-screen bg-background flex flex-col pb-20">
+      <AppHeader title="TODAY" streak={12} />
+
+      <main className="flex-1 flex flex-col">
         
-        <div className="flex items-center gap-6 text-xs md:text-sm font-bold">
-          <div className="flex items-center gap-2">
-            <Activity size={16} className="text-accent" />
-            <span>HR: 62 BPM</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <Battery size={16} className="text-accent" />
-            <span>PWR: 98%</span>
-          </div>
-          <div className="w-8 h-8 bg-white text-black flex items-center justify-center font-display font-black">
-            JS
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-1 grid grid-cols-1 lg:grid-cols-12 divide-y-2 lg:divide-y-0 lg:divide-x-2 divide-black">
-        
-        {/* Sidebar / Biometrics (Left Panel) */}
-        <aside className="lg:col-span-3 bg-secondary/10 hidden lg:block h-[calc(100vh-64px)] sticky top-[64px]">
-          <Telemetry />
-        </aside>
-
-        {/* Main Content / Circuit (Right Panel) */}
-        <section className="lg:col-span-9 bg-background flex flex-col">
-          
-          {/* Date Navigation Strip */}
-          <div className="flex items-center justify-between border-b-2 border-gray-200 overflow-x-auto bg-white">
-             <div className="flex">
-               {dates.map((date, i) => {
-                 const isSelected = date.toDateString() === selectedDate.toDateString();
-                 const isTodayDate = date.toDateString() === new Date().toDateString();
-                 
-                 return (
-                   <button 
-                    key={i}
-                    onClick={() => setSelectedDate(date)}
-                    className={`flex flex-col items-center justify-center min-w-[80px] p-4 border-r transition-all ${
-                      isSelected 
-                        ? "bg-black text-white" 
-                        : "bg-transparent hover:bg-gray-100 text-gray-400 hover:text-black"
-                    }`}
-                   >
-                     <span className="text-[10px] font-bold uppercase mb-1">{date.toLocaleDateString('en-US', { weekday: 'short' })}</span>
-                     <span className="text-xl font-display font-bold">{date.getDate()}</span>
-                     {isTodayDate && <span className={`w-1 h-1 rounded-full mt-2 ${isSelected ? "bg-accent" : "bg-black"}`}></span>}
-                   </button>
-                 )
-               })}
-             </div>
-             <button className="hidden md:flex items-center gap-2 text-xs font-bold uppercase px-6 hover:text-accent transition-colors whitespace-nowrap">
-               <Calendar size={14} /> View Archive
-             </button>
-          </div>
-
-          {/* The Protocol Circuit View */}
-          <div className="flex-1">
-            {isToday ? (
-              <ProtocolCircuit />
+        {/* Week Preview Strip */}
+        <div className="bg-white border-b-2 border-black">
+          {/* Week progress header */}
+          <button
+            onClick={() => {
+              vibrate("light");
+              setWeekExpanded(!weekExpanded);
+            }}
+            className="w-full flex items-center justify-between p-3 touch-manipulation"
+          >
+            <div className="flex items-center gap-3">
+              <div className="text-xs font-bold uppercase text-gray-500">
+                Week Progress
+              </div>
+              <div className="flex items-center gap-1 px-2 py-0.5 bg-accent/20 text-accent-foreground">
+                <span className="font-mono text-xs font-bold">{completedDays}/{workoutDays}</span>
+              </div>
+            </div>
+            {weekExpanded ? (
+              <ChevronUp className="w-5 h-5 text-gray-400" />
             ) : (
-               <div className="p-10 flex flex-col items-center justify-center h-full text-gray-400 space-y-4">
-                 <Terminal size={48} />
-                 <p className="font-mono text-sm">ARCHIVED DATA ENCRYPTED</p>
-                 <button className="px-4 py-2 border border-gray-300 text-xs font-bold uppercase hover:bg-black hover:text-white transition-colors">
-                   DECRYPT SESSION LOG
-                 </button>
-               </div>
+              <ChevronDown className="w-5 h-5 text-gray-400" />
+            )}
+          </button>
+
+          {/* Week days strip */}
+          <div className="flex border-t border-gray-200 overflow-x-auto scrollbar-hide">
+            {WEEK_DATA.map((day, i) => (
+              <div
+                key={i}
+                className={`flex flex-col items-center justify-center min-w-[calc(100%/7)] py-3 border-r border-gray-100 last:border-r-0 ${
+                  day.isToday 
+                    ? "bg-black text-white" 
+                    : day.completed 
+                      ? "bg-accent/10" 
+                      : ""
+                }`}
+              >
+                <span className="text-[10px] font-bold uppercase mb-1 opacity-60">
+                  {day.day}
+                </span>
+                <span className="text-lg font-display font-bold">
+                  {day.date}
+                </span>
+                <div className="mt-1.5 h-4 flex items-center justify-center">
+                  {day.completed ? (
+                    <Check className="w-4 h-4 text-green-600" />
+                  ) : day.type === "REST" ? (
+                    <Minus className="w-4 h-4 opacity-30" />
+                  ) : day.isToday ? (
+                    <Zap className="w-4 h-4 text-accent" />
+                  ) : (
+                    <div className="w-2 h-2 rounded-full bg-gray-300" />
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* Expanded week details */}
+          {weekExpanded && (
+            <div className="border-t-2 border-black p-4 space-y-3 animate-in slide-in-from-top-2 duration-200">
+              <div className="text-xs font-bold uppercase text-gray-500 mb-2">
+                This Week's Training
+              </div>
+              {WEEK_DATA.filter(d => d.type !== "REST").map((day, i) => (
+                <div
+                  key={i}
+                  className={`flex items-center justify-between p-3 border-2 ${
+                    day.isToday 
+                      ? "border-accent bg-accent/5" 
+                      : day.completed 
+                        ? "border-gray-300 bg-gray-50" 
+                        : "border-gray-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className={`w-8 h-8 flex items-center justify-center ${
+                      day.completed ? "bg-green-100" : day.isToday ? "bg-accent" : "bg-gray-100"
+                    }`}>
+                      {day.completed ? (
+                        <Check className="w-4 h-4 text-green-600" />
+                      ) : (
+                        <Dumbbell className="w-4 h-4" />
+                      )}
+                    </div>
+                    <div>
+                      <div className="font-mono text-sm font-bold uppercase">{day.type}</div>
+                      <div className="text-[10px] text-gray-500">
+                        {day.muscles.join(" • ")}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="text-xs font-mono text-gray-400">
+                    {day.day} {day.date}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Today's Workout Section */}
+        <div className="flex-1 p-4 space-y-4 pb-32">
+          
+          {/* Workout Header Card */}
+          <div className="border-2 border-black bg-white p-4 brutal-shadow">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
+                  Today's Protocol
+                </div>
+                <h1 className="font-display text-2xl font-black uppercase">
+                  {todayData?.type}
+                </h1>
+              </div>
+              <div className="text-right">
+                <div className="flex items-center gap-1 text-sm font-mono">
+                  <Clock className="w-4 h-4" />
+                  {duration}
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex gap-4 text-xs font-mono">
+              <div>
+                <span className="text-gray-500">EXERCISES:</span>{" "}
+                <span className="font-bold">{exercises.length}</span>
+              </div>
+              <div>
+                <span className="text-gray-500">SETS:</span>{" "}
+                <span className="font-bold">{totalSets}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Exercise List */}
+          <div className="space-y-3">
+            <div className="text-xs font-bold uppercase text-gray-500">
+              Exercises
+            </div>
+            
+            {exercises.map((exercise, i) => (
+              <div
+                key={exercise.id}
+                className="border-2 border-black bg-white overflow-hidden"
+              >
+                {/* Exercise Info */}
+                <div className="p-4">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 bg-gray-100 flex items-center justify-center font-mono font-bold text-sm">
+                        {i + 1}
+                      </div>
+                      <div>
+                        <h3 className="font-display font-bold uppercase text-lg leading-tight">
+                          {exercise.name}
+                        </h3>
+                        <div className="text-[10px] text-gray-500 uppercase mt-1">
+                          {exercise.type}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-3 gap-4 mt-3 pt-3 border-t border-gray-100">
+                    <div>
+                      <div className="text-[10px] text-gray-400 uppercase">Sets</div>
+                      <div className="font-mono font-bold">{exercise.sets}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-400 uppercase">Reps</div>
+                      <div className="font-mono font-bold">{exercise.reps}</div>
+                    </div>
+                    <div>
+                      <div className="text-[10px] text-gray-400 uppercase">Load</div>
+                      <div className="font-mono font-bold">{exercise.load}</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="flex border-t-2 border-black">
+                  <button
+                    onClick={() => handleSwapClick(exercise)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3
+                      font-mono text-xs font-bold uppercase
+                      hover:bg-gray-100 active:bg-gray-200 transition-colors
+                      touch-manipulation border-r border-black"
+                  >
+                    <RefreshCw className="w-4 h-4" />
+                    Swap
+                  </button>
+                  <button
+                    onClick={() => handleSkipClick(exercise)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3
+                      font-mono text-xs font-bold uppercase
+                      hover:bg-gray-100 active:bg-gray-200 transition-colors
+                      touch-manipulation border-r border-black"
+                  >
+                    <SkipForward className="w-4 h-4" />
+                    Skip
+                  </button>
+                  <button
+                    onClick={() => handleNotesClick(exercise)}
+                    className="flex-1 flex items-center justify-center gap-2 py-3
+                      font-mono text-xs font-bold uppercase
+                      hover:bg-gray-100 active:bg-gray-200 transition-colors
+                      touch-manipulation"
+                  >
+                    <BookOpen className="w-4 h-4" />
+                    Notes
+                  </button>
+                </div>
+              </div>
+            ))}
+
+            {/* Empty state */}
+            {exercises.length === 0 && (
+              <div className="border-2 border-dashed border-gray-300 p-8 text-center">
+                <Dumbbell className="w-8 h-8 mx-auto mb-3 text-gray-300" />
+                <p className="text-sm text-gray-500">No exercises remaining</p>
+                <p className="text-xs text-gray-400 mt-1">All exercises have been skipped</p>
+              </div>
             )}
           </div>
-        </section>
+        </div>
+
+        {/* Fixed Start Workout CTA */}
+        {exercises.length > 0 && (
+          <div className="fixed bottom-20 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
+            <Link href="/session">
+              <a 
+                onClick={() => vibrate("medium")}
+                className="flex items-center justify-center gap-2 w-full min-h-[56px] 
+                  bg-black text-white font-mono font-bold text-lg uppercase tracking-wider
+                  border-2 border-black hover:bg-accent hover:text-black 
+                  transition-all brutal-shadow-lg active:translate-y-1 active:shadow-none
+                  touch-manipulation"
+              >
+                <Zap className="w-5 h-5" />
+                Start Workout
+                <ChevronRight className="w-5 h-5" />
+              </a>
+            </Link>
+          </div>
+        )}
       </main>
+
+      {/* Bottom Sheets */}
+      <ExerciseNotesSheet
+        exercise={currentExerciseData || null}
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+      />
+
+      <SkipConfirmSheet
+        exerciseName={selectedExercise?.name || ""}
+        open={skipOpen}
+        onOpenChange={setSkipOpen}
+        onSkip={handleSkip}
+        onSwapInstead={handleSwapInstead}
+      />
+
+      <SwapExerciseSheet
+        currentExercise={currentExerciseData || null}
+        alternatives={alternatives}
+        open={swapOpen}
+        onOpenChange={setSwapOpen}
+        onSwap={handleSwap}
+      />
     </div>
   );
 }

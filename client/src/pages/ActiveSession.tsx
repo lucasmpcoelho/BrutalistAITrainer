@@ -99,14 +99,14 @@ export default function ActiveSession() {
       
       {/* Top Bar */}
       <header className="bg-black text-white p-4 flex justify-between items-center border-b-2 border-white sticky top-0 z-50">
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-4 h-10">
           <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
           <span className="font-bold tracking-widest text-xs md:text-sm">LIVE SESSION</span>
         </div>
-        <div className="font-display text-2xl font-bold tracking-tighter">
+        <div className="font-display text-2xl font-bold tracking-tighter h-10 flex items-center">
           {formatTime(sessionDuration)}
         </div>
-        <button onClick={() => setLocation("/dashboard")} className="text-xs font-bold uppercase hover:text-red-500 transition-colors">
+        <button onClick={() => setLocation("/dashboard")} className="text-xs font-bold uppercase hover:text-red-500 transition-colors h-10 flex items-center">
           Abort
         </button>
       </header>
@@ -196,7 +196,7 @@ export default function ActiveSession() {
                 System Cooling Down
               </div>
               
-              <div className="font-display text-[12rem] leading-none font-black tabular-nums">
+              <div className="font-display text-8xl md:text-[12rem] leading-none font-black tabular-nums">
                 {formatTime(restTimer)}
               </div>
 

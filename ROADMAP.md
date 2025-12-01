@@ -2,7 +2,7 @@
 
 > **Last Updated:** 2025-11-30  
 > **Current Phase:** Phase 1 — Mobile-First Foundation  
-> **Status:** Onboarding redesign complete, continuing mobile-first work
+> **Status:** Onboarding redesign complete, Dashboard/Session UI polished, continuing mobile-first work
 
 ---
 
@@ -33,7 +33,7 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [x] Terminal-style onboarding chat flow (`client/src/pages/Onboarding.tsx`)
 - [x] Dashboard with workout protocol view (`client/src/pages/Dashboard.tsx`)
 - [x] Protocol circuit component (`client/src/components/dashboard/ProtocolCircuit.tsx`)
-- [x] Telemetry/biometrics panel (`client/src/components/dashboard/Telemetry.tsx`)
+- [x] Health/Telemetry biometrics panel (`client/src/pages/Health.tsx`)
 - [x] Active workout session screen (`client/src/pages/ActiveSession.tsx`)
 - [x] Set logging with weight/reps inputs
 - [x] Rest timer between sets
@@ -49,10 +49,20 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [x] Haptics hook (`client/src/hooks/use-haptics.ts`)
 - [x] Bottom navigation component (`client/src/components/BottomNav.tsx`)
 - [x] **Mobile-first onboarding redesign** — 7-step flow with fixed bottom input, typing indicator, progress bar, and completion celebration
+- [x] **3-tab navigation structure** — TODAY, COACH, HEALTH with settings gear in header
+- [x] **Dashboard (TODAY tab) redesign** — Week preview strip, collapsible overview, mobile-first layout
+- [x] **Coach page (COACH tab)** — AI hub with proactive insights, quick actions, and chat interface
+- [x] **Health page (HEALTH tab)** — Biometrics dashboard with HRV, sleep, recovery score (mock data)
+- [x] Shared AppHeader component with streak display and settings gear
+- [x] **Dashboard exercise actions** — SWAP, SKIP, NOTES buttons on exercise cards
+- [x] Exercise database with form cues, alternatives, and muscle groups
+- [x] Notes bottom sheet with key cues and common mistakes
+- [x] Skip confirmation with "Swap instead?" option
+- [x] Swap bottom sheet with 3 deterministic alternatives
 
 ### Not Implemented
 - [ ] PWA service worker for offline support (vite-plugin-pwa)
-- [ ] Mobile-first UI for Dashboard, Active Session, Protocol Circuit
+- [ ] Mobile-first UI for Active Session
 - [ ] Backend API endpoints
 - [ ] Database persistence (currently mock data)
 - [ ] User authentication
@@ -109,21 +119,21 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 ### 1.5 Mobile-First UI — Dashboard
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P1-18 | [ ] | Convert Telemetry sidebar to bottom sheet on mobile | `client/src/pages/Dashboard.tsx` |
-| P1-19 | [ ] | Add floating action button for biometrics access | `client/src/pages/Dashboard.tsx` |
-| P1-20 | [ ] | Optimize calendar strip for horizontal scroll/snap | `client/src/pages/Dashboard.tsx` |
-| P1-21 | [ ] | Add bottom navigation bar | `client/src/pages/Dashboard.tsx` |
-| P1-36 | [ ] | Add gamification header (streak display, XP/points) | `client/src/pages/Dashboard.tsx` |
-| P1-37 | [ ] | Place primary "Start Workout" CTA in bottom thumb zone | `client/src/pages/Dashboard.tsx` |
+| P1-18 | [ ] | Rename/Refactor Telemetry component to HealthPreviewCard for dashboard | `client/src/components/dashboard/HealthPreviewCard.tsx` (rename from Telemetry.tsx) |
+| P1-19 | [ ] | Add floating action button for Health tab access (replacing dedicated telemetry sheet) | `client/src/pages/Dashboard.tsx` |
+| P1-20 | [x] | Optimize calendar strip for horizontal scroll/snap | `client/src/pages/Dashboard.tsx` |
+| P1-21 | [x] | Add bottom navigation bar | `client/src/pages/Dashboard.tsx` |
+| P1-36 | [x] | Add gamification header (streak display, XP/points) | `client/src/pages/Dashboard.tsx` |
+| P1-37 | [x] | Place primary "Start Workout" CTA in bottom thumb zone | `client/src/pages/Dashboard.tsx` |
 
 ### 1.6 Mobile-First UI — Protocol Circuit
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P1-22 | [ ] | Increase exercise card touch targets (56px+ height) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
-| P1-23 | [ ] | Make stats grid text larger (text-xl) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
-| P1-24 | [ ] | Fixed bottom CTA with safe area padding | `client/src/components/dashboard/ProtocolCircuit.tsx` |
-| P1-38 | [ ] | Add visual progress indicator (X/Y exercises done) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
-| P1-39 | [ ] | Show workout metadata (muscle groups, estimated time) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
+| P1-22 | [x] | Increase exercise card touch targets (56px+ height) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
+| P1-23 | [x] | Make stats grid text larger (text-xl) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
+| P1-24 | [x] | Fixed bottom CTA with safe area padding | `client/src/components/dashboard/ProtocolCircuit.tsx` |
+| P1-38 | [x] | Add visual progress indicator (X/Y exercises done) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
+| P1-39 | [x] | Show workout metadata (muscle groups, estimated time) | `client/src/components/dashboard/ProtocolCircuit.tsx` |
 
 ### 1.7 Mobile-First UI — Active Session (Set Logging)
 | ID | Status | Task | Files |
@@ -131,18 +141,65 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 | P1-25 | [ ] | Add +/- quick adjust buttons for weight input (48px × 48px min) | `client/src/pages/ActiveSession.tsx` |
 | P1-26 | [ ] | Add +/- quick adjust buttons for reps input (48px × 48px min) | `client/src/pages/ActiveSession.tsx` |
 | P1-27 | [ ] | Set weight/reps input containers to 60px+ height | `client/src/pages/ActiveSession.tsx` |
-| P1-28 | [ ] | Make LOG SET button full width, 56px+ height | `client/src/pages/ActiveSession.tsx` |
-| P1-29 | [ ] | Add safe area padding to session screen | `client/src/pages/ActiveSession.tsx` |
-| P1-30 | [ ] | Show previous set values as reference context | `client/src/pages/ActiveSession.tsx` |
+| P1-28 | [x] | Make LOG SET button full width, 56px+ height | `client/src/pages/ActiveSession.tsx` |
+| P1-29 | [x] | Add safe area padding to session screen | `client/src/pages/ActiveSession.tsx` |
+| P1-30 | [x] | Show previous set values as reference context | `client/src/pages/ActiveSession.tsx` |
 | P1-31 | [ ] | Add haptic feedback on all button presses | `client/src/pages/ActiveSession.tsx` |
-| P1-32 | [ ] | Minimal header with exercise name and back button only | `client/src/pages/ActiveSession.tsx` |
+| P1-32 | [x] | Minimal header with exercise name and back button only | `client/src/pages/ActiveSession.tsx` |
 
 ### 1.8 Mobile-First UI — Rest Timer
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P1-33 | [ ] | Giant timer display (80px+ font, monospace) | `client/src/pages/ActiveSession.tsx` |
-| P1-34 | [ ] | Large +30s and SKIP buttons (80px min width) | `client/src/pages/ActiveSession.tsx` |
-| P1-35 | [ ] | Preview next exercise during rest | `client/src/pages/ActiveSession.tsx` |
+| P1-33 | [x] | Giant timer display (80px+ font, monospace) | `client/src/pages/ActiveSession.tsx` |
+| P1-34 | [x] | Large +30s and SKIP buttons (80px min width) | `client/src/pages/ActiveSession.tsx` |
+| P1-35 | [x] | Preview next exercise during rest | `client/src/pages/ActiveSession.tsx` |
+
+### 1.9 App Navigation Structure
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P1-43 | [x] | Update BottomNav to 3-tab structure (TODAY, COACH, HEALTH) | `client/src/components/BottomNav.tsx` |
+| P1-44 | [x] | Add settings gear icon to header (replaces profile tab) | `client/src/components/AppHeader.tsx` |
+| P1-45 | [x] | Update App.tsx with /coach and /health routes | `client/src/App.tsx` |
+| P1-46 | [x] | Integrate BottomNav into main app screens | Various |
+
+### 1.10 TODAY Tab (Dashboard Redesign)
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P1-47 | [x] | Add integrated week preview strip with workout types | `client/src/pages/Dashboard.tsx` |
+| P1-48 | [x] | Mobile-first layout with safe areas and bottom nav padding | `client/src/pages/Dashboard.tsx` |
+| P1-49 | [x] | Collapsible week overview section | `client/src/pages/Dashboard.tsx` |
+| P1-50 | [x] | Move "Start Workout" CTA to fixed bottom thumb zone | `client/src/pages/Dashboard.tsx` |
+| P1-51 | [x] | Add streak/gamification display to header | `client/src/pages/Dashboard.tsx` |
+
+### 1.11 COACH Tab (AI Personal Trainer)
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P1-52 | [x] | Create Coach page with hub layout | `client/src/pages/Coach.tsx` |
+| P1-53 | [x] | Add proactive AI insight card at top | `client/src/pages/Coach.tsx` |
+| P1-54 | [x] | Add quick action chips grid (6 actions) | `client/src/pages/Coach.tsx` |
+| P1-55 | [x] | Add persistent chat input at bottom | `client/src/pages/Coach.tsx` |
+| P1-56 | [x] | Create expandable full chat view | `client/src/pages/Coach.tsx` |
+
+### 1.12 HEALTH Tab (Biometrics Dashboard)
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P1-57 | [x] | Create Health page with mock data | `client/src/pages/Health.tsx` |
+| P1-58 | [x] | Add HRV display with trend visualization | `client/src/pages/Health.tsx` |
+| P1-59 | [x] | Add sleep metrics section | `client/src/pages/Health.tsx` |
+| P1-60 | [x] | Add recovery score with AI recommendation | `client/src/pages/Health.tsx` |
+| P1-61 | [x] | Add resting heart rate trend | `client/src/pages/Health.tsx` |
+| P1-62 | [x] | Add "Connect HealthKit" placeholder for future integration | `client/src/pages/Health.tsx` |
+
+### 1.13 Dashboard Exercise Actions
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P1-63 | [x] | Create exercise data with cues, alternatives, and muscle groups | `client/src/data/exercises.ts` |
+| P1-64 | [x] | Add 3 action buttons to exercise cards (SWAP, SKIP, NOTES) | `client/src/pages/Dashboard.tsx` |
+| P1-65 | [x] | Create Notes bottom sheet with form cues and tips | `client/src/components/ExerciseNotesSheet.tsx` |
+| P1-66 | [x] | Create Skip confirmation with "Swap instead?" prompt | `client/src/components/SkipConfirmSheet.tsx` |
+| P1-67 | [x] | Create Swap bottom sheet with 3 deterministic alternatives | `client/src/components/SwapExerciseSheet.tsx` |
+| P1-68 | [x] | Implement exercise removal from workout state | `client/src/pages/Dashboard.tsx` |
+| P1-69 | [x] | Implement exercise swap in workout state | `client/src/pages/Dashboard.tsx` |
 
 ---
 
@@ -332,30 +389,7 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 | 2025-11-30 | Added Phase 2.5: AI Personal Trainer | OpenAI GPT-5.1 integration planned |
 | 2025-11-30 | P1-04, P1-05, P1-08, P1-09, P1-10, P1-11, P1-12 | Marked pre-existing implementations as complete |
 | 2025-11-30 | P1-13 to P1-17, P1-40 to P1-42 | **Onboarding redesign**: 7-step flow, fixed bottom input, typing indicator, progress bar, completion celebration |
-
----
-
-## Notes for AI Agents
-
-When updating this roadmap:
-
-1. **Mark task status** by changing `[ ]` to `[x]` (complete) or `[~]` (in progress)
-2. **Update "Active Work"** section in Current State when starting tasks
-3. **Append to Changelog** after completing work with date and task IDs
-4. **Update "Last Updated"** timestamp in header
-5. **Update "Current Phase"** when moving to next phase
-6. **Move completed items** from "Not Implemented" to "Implemented" in Current State
-
-### Status Legend
-- `[ ]` — Not started
-- `[~]` — In progress
-- `[x]` — Complete
-
-### Task ID Format
-- `P1-XX` — Phase 1 tasks (P1-40+ for additional onboarding tasks)
-- `P2-XX` — Phase 2 tasks
-- `P2.5-XX` — Phase 2.5 tasks (AI Personal Trainer)
-- `P3-XX` — Phase 3 tasks
-- `P4-XX` — Phase 4 tasks
-- `P5-XX` — Phase 5 tasks
-
+| 2025-11-30 | P1-43 to P1-62 | **3-tab navigation**: BottomNav (TODAY/COACH/HEALTH), AppHeader with settings gear, Dashboard redesign with week strip, Coach page with AI hub + chat, Health page with biometrics |
+| 2025-11-30 | P1-63 to P1-69 | **Dashboard exercise actions**: SWAP, SKIP, NOTES buttons, exercise database with form cues, Notes sheet, Skip confirmation with swap option, Swap sheet with 3 alternatives |
+| 2025-11-30 | P1-20, P1-21, P1-36, P1-37, P1-22 to P1-24, P1-38, P1-39, P1-28, P1-29, P1-30, P1-32 to P1-35 | **Dashboard & Session UI Audit**: Verified items implemented in code (calendar strip, bottom nav padding, gamification header, card touch targets, progress indicators, large timer, etc.) |
+| 2025-11-30 | P1-18 | **Terminology Unification**: Renamed "Telemetry" tasks to "Health" to align with 3-tab structure and prevent duplicate build efforts |
