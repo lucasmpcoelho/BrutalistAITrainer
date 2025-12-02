@@ -21,9 +21,12 @@ export function metaImagesPlugin(): Plugin {
       const opengraphPngPath = path.join(publicDir, 'opengraph.png');
       const opengraphJpgPath = path.join(publicDir, 'opengraph.jpg');
       const opengraphJpegPath = path.join(publicDir, 'opengraph.jpeg');
+      const opengraphSvgPath = path.join(publicDir, 'opengraph.svg');
 
       let imageExt: string | null = null;
-      if (fs.existsSync(opengraphPngPath)) {
+      if (fs.existsSync(opengraphSvgPath)) {
+        imageExt = 'svg';
+      } else if (fs.existsSync(opengraphPngPath)) {
         imageExt = 'png';
       } else if (fs.existsSync(opengraphJpgPath)) {
         imageExt = 'jpg';

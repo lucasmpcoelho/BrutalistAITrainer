@@ -54,3 +54,5 @@ echo "✅ Successfully pushed to GitHub!"
 echo "🌐 View your repo at: https://github.com/lucasmpcoelho/BrutalistAITrainer"
 
 
+
+
