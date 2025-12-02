@@ -1,3 +1,545 @@
 ---
-alwaysApply: true
+description: Systematic debugging methodology for AI agents - Best practices for identifying, analyzing, and resolving issues
+alwaysApply: false
 ---
+
+# Debugging Best Practices for AI Agents
+
+> **Purpose**: This document provides systematic debugging methodologies and best practices for AI agents when troubleshooting issues in the application. These guidelines are derived from established debugging techniques and optimized for AI-assisted problem-solving.
+
+---
+
+## 1. ESTABLISH A STRUCTURED DEBUGGING WORKFLOW
+
+### The Debugging Loop
+
+When encountering an issue, follow this iterative cycle:
+
+1. **Reproduce** → Can you consistently trigger the problem?
+2. **Observe** → What exactly happens? What should happen?
+3. **Hypothesize** → What could cause this behavior?
+4. **Test** → Add diagnostics to verify your hypothesis
+5. **Fix** → Implement the solution
+6. **Verify** → Confirm the fix resolves the issue
+
+**Never skip steps 1-4**. Jumping to fixes without understanding the root cause leads to incomplete solutions.
+
+### Reason Before Acting
+
+Before writing any code to fix an issue:
+
+1. **List 5-7 possible causes** for the observed behavior
+2. **Propose diagnostic steps** for each potential cause
+3. **Prioritize hypotheses** from most likely to least likely
+4. **Start with the simplest diagnostic** that can eliminate multiple hypotheses
+
+**Example Approach**:
+```
+Issue: "Login form isn't submitting"
+
+Possible causes:
+1. Form validation preventing submission
+2. Event handler not attached
+3. Network request failing silently
+4. JavaScript error blocking execution
+5. Form action/endpoint misconfigured
+
+Diagnostics:
+- Check browser console for errors
+- Add console.log to form submit handler
+- Inspect network tab for request
+- Verify form validation state
+```
+
+---
+
+## 2. GATHER COMPREHENSIVE CONTEXT FIRST
+
+### Before Debugging, Read:
+
+- [ ] **ROADMAP.md** - Understand current project context and priorities
+- [ ] **Relevant source files** - Read the code that's failing, not just the error message
+- [ ] **Related components/services** - Understand the full data flow
+- [ ] **Recent changes** - Check git history for recent modifications
+- [ ] **Dependencies** - Verify package versions and compatibility
+
+### Context Gathering Checklist
+
+1. **Read the actual error message** - Don't just skim it
+2. **Check the stack trace** - Identify the exact line/file causing the issue
+3. **Review related code** - Read functions/components that interact with the failing code
+4. **Understand the data flow** - Trace data from input to output
+5. **Check environment** - Verify environment variables, configuration, and runtime conditions
+
+### Use Codebase Search Strategically
+
+- Search for **similar error patterns** in the codebase
+- Find **how similar features are implemented** elsewhere
+- Look for **existing error handling patterns** to follow
+- Identify **related components** that might be affected
+
+---
+
+## 3. IMPLEMENT OBSERVABILITY AND LOGGING
+
+### Strategic Logging
+
+Add logs at critical points to understand execution flow:
+
+**Where to Log**:
+- **Function entry points** - Log input parameters
+- **Decision points** - Log conditional branches taken
+- **External calls** - Log API requests/responses, database queries
+- **Error boundaries** - Log caught exceptions with full context
+- **State changes** - Log significant state transitions
+
+**What to Log**:
+```typescript
+// Good logging example
+log(`[${functionName}] Processing request`, { 
+  userId, 
+  requestId, 
+  input: sanitizedInput 
+});
+
+log(`[${functionName}] Database query result`, { 
+  query, 
+  rowCount, 
+  duration: `${duration}ms` 
+});
+
+log(`[${functionName}] Error occurred`, { 
+  error: error.message, 
+  stack: error.stack, 
+  context: { userId, requestId } 
+});
+```
+
+### Diagnostic Statements
+
+When debugging, temporarily add:
+- `console.log()` for execution flow
+- `console.table()` for structured data inspection
+- `console.time()` / `console.timeEnd()` for performance
+- `debugger` statements for breakpoints (remove after debugging)
+
+**Remember**: Remove or comment out debug logs before committing fixes.
+
+---
+
+## 4. USE DIVIDE AND CONQUER METHODOLOGY
+
+### Binary Search for Bugs
+
+When the problem area is large:
+
+1. **Identify the boundary** - Where does it work? Where does it fail?
+2. **Split in half** - Test the midpoint
+3. **Narrow down** - Based on result, focus on the problematic half
+4. **Repeat** - Continue until you've isolated the issue
+
+### Isolate Components
+
+Test components in isolation:
+
+1. **Disable related features** - Turn off non-essential code paths
+2. **Mock dependencies** - Replace external services with test doubles
+3. **Simplify inputs** - Use minimal test cases
+4. **Test incrementally** - Add complexity back one piece at a time
+
+### System Boundary Testing
+
+Test at system boundaries:
+- **Input validation** - What happens with edge cases?
+- **API boundaries** - Are requests/responses formatted correctly?
+- **Database boundaries** - Are queries handling null/empty results?
+- **State boundaries** - What happens at initial/empty/full states?
+
+---
+
+## 5. APPLY RUBBER DUCK DEBUGGING PRINCIPLES
+
+### Explain the Problem Out Loud
+
+Before asking for help or implementing fixes:
+
+1. **Describe the expected behavior** - What should happen?
+2. **Describe the actual behavior** - What actually happens?
+3. **Describe what you've tried** - What diagnostics have you run?
+4. **Describe what you know** - What facts are certain?
+5. **Identify the gap** - What's the difference between expected and actual?
+
+### Write Clear Problem Statements
+
+A good problem statement includes:
+- **Reproduction steps** - How to trigger the issue
+- **Expected vs Actual** - Clear comparison
+- **Environment** - Browser, OS, Node version, etc.
+- **Error messages** - Full error text and stack trace
+- **What you've tried** - Previous debugging attempts
+
+---
+
+## 6. SYSTEMATIC FAILURE ANALYSIS
+
+### Classify the Type of Failure
+
+Categorize issues to apply appropriate debugging strategies:
+
+**Types of Failures**:
+- **Syntactic** - Code won't compile/parse (TypeScript errors, syntax errors)
+- **Runtime** - Code crashes during execution (exceptions, null references)
+- **Logic** - Code runs but produces wrong results (incorrect calculations, wrong conditions)
+- **Performance** - Code works but is too slow (bottlenecks, memory leaks)
+- **Integration** - Components work alone but fail together (API mismatches, data format issues)
+- **State** - Issues with data persistence or state management (stale data, race conditions)
+
+### Root Cause Analysis
+
+For each failure type, ask:
+
+1. **What changed?** - Recent code changes, dependency updates, environment changes
+2. **When does it fail?** - Always? Sometimes? Under specific conditions?
+3. **Where does it fail?** - Specific component, function, or line?
+4. **Who/what is affected?** - All users? Specific scenarios? Specific data?
+
+---
+
+## 7. VERIFY ASSUMPTIONS SYSTEMATICALLY
+
+### Challenge Your Assumptions
+
+Common false assumptions that lead to debugging dead ends:
+
+- ❌ "This code path is never executed"
+- ❌ "This variable is always defined"
+- ❌ "This API always returns data in this format"
+- ❌ "This function is synchronous"
+- ❌ "This error can't happen here"
+
+### Test Assumptions Explicitly
+
+```typescript
+// Instead of assuming, verify:
+if (!user) {
+  log('[DEBUG] User is null/undefined', { context });
+  return;
+}
+
+if (!Array.isArray(results)) {
+  log('[DEBUG] Results is not an array', { 
+    type: typeof results, 
+    value: results 
+  });
+  return;
+}
+```
+
+### Use Type Guards and Assertions
+
+```typescript
+// Type guards for runtime safety
+function isValidUser(user: unknown): user is User {
+  return (
+    typeof user === 'object' &&
+    user !== null &&
+    'id' in user &&
+    'email' in user
+  );
+}
+
+// Assertions for development
+console.assert(condition, 'Expected condition to be true', { context });
+```
+
+---
+
+## 8. DEBUG FROM THE OUTSIDE IN
+
+### Start with User-Facing Symptoms
+
+1. **Observe the symptom** - What does the user see/experience?
+2. **Trace backwards** - Follow the execution path from UI to backend
+3. **Identify the failure point** - Where does the expected behavior diverge?
+4. **Fix at the source** - Address the root cause, not just the symptom
+
+### Check the Obvious First
+
+Before diving deep, verify:
+- ✅ Is the server running?
+- ✅ Are environment variables set correctly?
+- ✅ Are dependencies installed?
+- ✅ Is the code deployed correctly?
+- ✅ Are there browser console errors?
+- ✅ Are there network errors in DevTools?
+
+### Use Browser DevTools Effectively
+
+**Console Tab**:
+- Check for JavaScript errors
+- Inspect logged values
+- Test expressions in console
+
+**Network Tab**:
+- Verify API requests are sent
+- Check request/response payloads
+- Identify failed requests
+- Review response status codes
+
+**Sources Tab**:
+- Set breakpoints
+- Step through code execution
+- Inspect variable values
+- Watch expressions
+
+**Application Tab**:
+- Check localStorage/sessionStorage
+- Inspect cookies
+- Review service workers
+- Check indexedDB
+
+---
+
+## 9. TEST HYPOTHESES WITH MINIMAL CHANGES
+
+### One Change at a Time
+
+When testing hypotheses:
+- **Make one diagnostic change** at a time
+- **Test immediately** after each change
+- **Revert if it doesn't help** before trying the next approach
+- **Document what you tried** and the result
+
+### Create Minimal Reproduction Cases
+
+When debugging:
+1. **Strip away non-essential code** - Remove unrelated features
+2. **Use minimal test data** - Smallest dataset that reproduces the issue
+3. **Isolate the problem** - Create a standalone test case if possible
+4. **Share the minimal case** - Helps others understand the issue
+
+### Use Feature Flags for Safe Testing
+
+```typescript
+// Temporarily disable features to isolate issues
+const DEBUG_MODE = process.env.DEBUG === 'true';
+
+if (DEBUG_MODE) {
+  log('[DEBUG] Skipping feature X for testing');
+  return;
+}
+```
+
+---
+
+## 10. VERIFY FIXES THOROUGHLY
+
+### Test the Fix
+
+After implementing a fix:
+
+1. **Reproduce the original issue** - Verify it's actually fixed
+2. **Test related scenarios** - Ensure you didn't break anything else
+3. **Test edge cases** - Verify the fix handles boundary conditions
+4. **Test in different environments** - Dev, staging, production-like
+
+### Regression Testing
+
+Check for regressions:
+- **Run existing tests** - Ensure all tests still pass
+- **Test related features** - Verify dependent functionality still works
+- **Test user workflows** - Ensure end-to-end flows work correctly
+
+### Clean Up After Debugging
+
+Before considering the issue resolved:
+- [ ] Remove temporary debug logs
+- [ ] Remove commented-out code
+- [ ] Remove `debugger` statements
+- [ ] Update error messages if they were improved
+- [ ] Add permanent logging if it would help future debugging
+- [ ] Document the fix if it's non-obvious
+
+---
+
+## 11. LEVERAGE EXISTING TOOLS AND PATTERNS
+
+### Use Project-Specific Debugging Tools
+
+Check the codebase for:
+- **Existing logging utilities** - Use `log()` function from `server/app.ts`
+- **Error handling patterns** - Follow established error handling conventions
+- **Testing utilities** - Use existing test helpers and mocks
+- **Development tools** - Leverage existing dev scripts and tooling
+
+### Follow Established Patterns
+
+- **Match existing error handling** - Use the same patterns as other parts of the codebase
+- **Use existing utilities** - Don't reinvent logging, validation, etc.
+- **Follow code style** - Maintain consistency with existing code
+
+---
+
+## 12. DOCUMENT DEBUGGING SESSIONS
+
+### Keep a Debugging Log
+
+For complex issues, document:
+- **Problem statement** - Clear description of the issue
+- **Hypotheses tested** - What you tried and why
+- **Diagnostics added** - Logs, breakpoints, test cases
+- **Findings** - What you discovered
+- **Solution** - How you fixed it
+- **Lessons learned** - What to watch for in the future
+
+### Update Documentation
+
+If you discover:
+- **Common pitfalls** - Document them for future reference
+- **Non-obvious behavior** - Add comments explaining why
+- **Configuration requirements** - Update setup/README docs
+- **Known limitations** - Document workarounds or future improvements
+
+---
+
+## 13. KNOW WHEN TO ASK FOR HELP
+
+### Escalate When:
+
+- You've spent significant time without progress
+- The issue requires domain knowledge you don't have
+- The fix requires architectural decisions
+- The problem affects critical functionality
+- You need clarification on expected behavior
+
+### Provide Context When Asking
+
+Include:
+- **Problem statement** - What's broken?
+- **What you've tried** - Diagnostic steps taken
+- **What you found** - Relevant logs, errors, observations
+- **Hypotheses** - What you think might be wrong
+- **Minimal reproduction** - How to trigger the issue
+
+---
+
+## 14. PREVENT FUTURE ISSUES
+
+### Learn from Each Bug
+
+After fixing an issue, consider:
+- **Could this have been prevented?** - Better validation? Type safety? Tests?
+- **Is this pattern elsewhere?** - Should we fix similar code proactively?
+- **Should we add tests?** - Prevent regression
+- **Should we improve error messages?** - Make future debugging easier
+
+### Add Defensive Programming
+
+Where appropriate:
+- **Add input validation** - Fail fast with clear errors
+- **Add type guards** - Catch type mismatches early
+- **Add assertions** - Verify assumptions in development
+- **Improve error messages** - Include context and actionable information
+
+---
+
+## Debugging Checklist
+
+When debugging an issue, verify:
+
+### Initial Investigation
+- [ ] Read ROADMAP.md for project context
+- [ ] Reproduced the issue consistently
+- [ ] Read relevant source files completely
+- [ ] Checked browser console/server logs for errors
+- [ ] Understood expected vs actual behavior
+- [ ] Identified the failure point in the code
+
+### Diagnostic Phase
+- [ ] Listed multiple possible causes
+- [ ] Added strategic logging at key points
+- [ ] Tested hypotheses one at a time
+- [ ] Verified assumptions explicitly
+- [ ] Checked obvious causes (server running, env vars, etc.)
+- [ ] Used DevTools effectively (console, network, sources)
+
+### Fix Implementation
+- [ ] Identified root cause (not just symptom)
+- [ ] Implemented minimal fix
+- [ ] Tested the fix works
+- [ ] Tested for regressions
+- [ ] Removed temporary debug code
+- [ ] Followed existing code patterns
+
+### Verification
+- [ ] Original issue is resolved
+- [ ] Related functionality still works
+- [ ] Edge cases handled
+- [ ] Code is clean (no debug logs left)
+- [ ] Solution is maintainable
+
+---
+
+## Common Debugging Patterns
+
+### Pattern 1: "It Works on My Machine"
+
+**Symptoms**: Code works in one environment but not another
+
+**Debugging Steps**:
+1. Compare environment configurations
+2. Check environment variables
+3. Verify dependency versions match
+4. Check for platform-specific code paths
+5. Review build/deployment differences
+
+### Pattern 2: "Intermittent Failures"
+
+**Symptoms**: Issue occurs sometimes but not always
+
+**Debugging Steps**:
+1. Identify what's different between success and failure cases
+2. Check for race conditions (async timing issues)
+3. Look for uninitialized state
+4. Check for external dependencies (APIs, databases)
+5. Review concurrent access patterns
+
+### Pattern 3: "Silent Failures"
+
+**Symptoms**: Code runs but nothing happens or wrong result
+
+**Debugging Steps**:
+1. Add logging at every step of execution
+2. Verify function is actually being called
+3. Check return values and side effects
+4. Verify conditional logic (if/else branches)
+5. Check for early returns or exceptions being swallowed
+
+### Pattern 4: "Performance Issues"
+
+**Symptoms**: Code works but is slow
+
+**Debugging Steps**:
+1. Profile the code (use `console.time()` or performance tools)
+2. Identify bottlenecks (loops, API calls, database queries)
+3. Check for N+1 query problems
+4. Look for unnecessary re-renders (React)
+5. Review algorithm complexity
+
+---
+
+## Remember
+
+> **"Debugging is twice as hard as writing code. If you write code as cleverly as possible, you are, by definition, not smart enough to debug it."** - Brian Kernighan
+
+**Your debugging success metric**: Can you identify and fix issues systematically, leaving the codebase cleaner and more maintainable than when you started?
+
+---
+
+## Sources & References
+
+- **Rubber Duck Debugging** - Explaining problems to understand them better
+- **Divide and Conquer** - Binary search methodology for isolating issues
+- **Systematic Debugging** - Structured approaches from software engineering
+- **Observability Best Practices** - Logging and monitoring for AI systems
+- **Test-Driven Debugging** - Using tests to verify fixes and prevent regressions

@@ -1,34 +1,7 @@
-# IRON_AI — Mobile UX Design System for AI Agents
-
-> **Purpose**: This document defines the design thinking framework, principles, and patterns that AI agents MUST internalize when building features for IRON_AI. Read this before writing any UI code.
-
 ---
-
-## Part 1: Design Thinking Framework
-
-### The 5-Second Test
-
-Before implementing any feature, ask:
-
-1. **Can the user understand this in under 5 seconds?** — If explanation is needed, simplify.
-2. **Can this be used with one thumb?** — The user is at the gym, phone in one hand.
-3. **Does this feel powerful?** — Brutalist design celebrates strength, not softness.
-4. **Does this reward the user?** — Every interaction should acknowledge effort.
-5. **Would I use this mid-set?** — If it requires focus, it fails the gym test.
-
-### The Psychology of Fitness Apps
-
-Users come to IRON_AI in specific mental states. Design for these:
-
-| State | User Need | Design Response |
-|-------|-----------|-----------------|
-| **Pre-workout** | Motivation, clarity | Bold headlines, clear today's protocol |
-| **Mid-workout** | Speed, zero friction | Maximum touch targets, minimal choices |
-| **Post-workout** | Validation, reward | Celebration, progress visualization |
-| **Between sessions** | Curiosity, planning | Stats, streaks, upcoming workouts |
-
+description: Apply on any task that require UI change
+alwaysApply: false
 ---
-
 ## Part 2: Foundational UX Laws
 
 ### Fitts's Law

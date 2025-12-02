@@ -9,21 +9,17 @@ alwaysApply: true
 
 ---
 
-## Core Philosophy
-
-**Vibe coding is about flow, not friction.** As an AI agent, your role is to enable rapid iteration, clear communication, and high-quality code output while minimizing user frustration.
-
----
-
 ## 1. UNDERSTAND BEFORE YOU CODE
 
 ### Before Writing Any Code:
+- **Read ROADMAP.md first** to understand the current project context, priorities, and ongoing work
 - **Analyze the full context** of the user's request before generating code
 - **Ask clarifying questions** if the request is ambiguous—never assume
 - **Review existing code patterns** in the project to maintain consistency
 - **Check the project's tech stack** and use only technologies already present unless explicitly asked to add new ones
 
 ### Context Awareness:
+- **Always read ROADMAP.md** to understand project priorities, current phase, and context before making any changes
 - Always read relevant files before proposing changes
 - Understand the project structure and architecture
 - Identify dependencies and potential conflicts
@@ -230,6 +226,7 @@ GOOD:
 
 Before generating any code, verify:
 
+- [ ] **Read ROADMAP.md** to understand current project context and priorities
 - [ ] Understood the full context of the request
 - [ ] Read relevant existing files
 - [ ] Identified the tech stack in use
@@ -244,6 +241,7 @@ Before generating any code, verify:
 
 After generating code, verify:
 
+- [ ] **Reviewed ROADMAP.md** to ensure changes align with project priorities and context
 - [ ] Code follows existing project patterns
 - [ ] All imports are from existing dependencies (or clearly flagged as new)
 - [ ] Error handling is appropriate (not excessive)

@@ -83,17 +83,17 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 ### 1.1 Remove AR/Computer Vision
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P1-01 | [ ] | Remove `arMode` state and AR overlay from ActiveSession | `client/src/pages/ActiveSession.tsx` |
-| P1-02 | [ ] | Remove Form Check button and Scan icon import | `client/src/pages/ActiveSession.tsx` |
-| P1-03 | [ ] | Replace "Precision Form" feature with gamification feature | `client/src/components/Features.tsx` |
+| P1-01 | [x] | Remove `arMode` state and AR overlay from ActiveSession | `client/src/pages/ActiveSession.tsx` |
+| P1-02 | [x] | Remove Form Check button and Scan icon import | `client/src/pages/ActiveSession.tsx` |
+| P1-03 | [x] | Replace "Precision Form" feature with gamification feature | `client/src/components/Features.tsx` |
 
 ### 1.2 PWA Setup
 | ID | Status | Task | Files |
 |----|--------|------|-------|
 | P1-04 | [x] | Create PWA manifest.json with app metadata | `client/public/manifest.json` |
 | P1-05 | [x] | Add manifest link and iOS meta tags to index.html | `client/index.html` |
-| P1-06 | [ ] | Install and configure vite-plugin-pwa | `package.json`, `vite.config.ts` |
-| P1-07 | [ ] | Implement service worker for offline support | via vite-plugin-pwa |
+| P1-06 | [x] | Install and configure vite-plugin-pwa | `package.json`, `vite.config.ts` |
+| P1-07 | [x] | Implement service worker for offline support | via vite-plugin-pwa |
 | P1-08 | [x] | Add install prompt UI component | `client/src/components/InstallPrompt.tsx` |
 
 ### 1.3 Mobile-First UI — Global
@@ -119,13 +119,13 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 ### 1.5 Mobile-First UI — Dashboard
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P1-18 | [ ] | Rename/Refactor Telemetry component to HealthPreviewCard for dashboard | `client/src/components/dashboard/HealthPreviewCard.tsx` (rename from Telemetry.tsx) |
-| P1-19 | [ ] | Add floating action button for Health tab access (replacing dedicated telemetry sheet) | `client/src/pages/Dashboard.tsx` |
+| P1-18 | [ ] | Consolidate naming: ensure dashboard references the Telemetry/HealthPreviewCard component consistently | `client/src/components/dashboard/Telemetry.tsx` (to be aliased as HealthPreviewCard) |
 | P1-20 | [x] | Optimize calendar strip for horizontal scroll/snap | `client/src/pages/Dashboard.tsx` |
 | P1-21 | [x] | Add bottom navigation bar | `client/src/pages/Dashboard.tsx` |
 | P1-36 | [x] | Add gamification header (streak display, XP/points) | `client/src/pages/Dashboard.tsx` |
 | P1-37 | [x] | Place primary "Start Workout" CTA in bottom thumb zone | `client/src/pages/Dashboard.tsx` |
 
+*Note: Former task P1-19 (Health FAB) is intentionally removed because the Health tab is accessible through the persistent BottomNav (`client/src/components/BottomNav.tsx`).*
 ### 1.6 Mobile-First UI — Protocol Circuit
 | ID | Status | Task | Files |
 |----|--------|------|-------|
@@ -146,6 +146,7 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 | P1-30 | [x] | Show previous set values as reference context | `client/src/pages/ActiveSession.tsx` |
 | P1-31 | [ ] | Add haptic feedback on all button presses | `client/src/pages/ActiveSession.tsx` |
 | P1-32 | [x] | Minimal header with exercise name and back button only | `client/src/pages/ActiveSession.tsx` |
+| P1-70 | [ ] | Integrate exercise notes sheet in active session for form cues access during workout | `client/src/pages/ActiveSession.tsx` |
 
 ### 1.8 Mobile-First UI — Rest Timer
 | ID | Status | Task | Files |
@@ -293,6 +294,33 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 
 ---
 
+## Phase 2.6: AI Nutrition & Food Logging
+
+*Goal: AI-driven food logging and nutrition analysis for calorie/protein insights*
+
+### 2.6.1 Food Logging Infrastructure
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.6-01 | [ ] | Create food logging UI component | `client/src/components/nutrition/FoodLogger.tsx` (new) |
+| P2.6-02 | [ ] | Add food entries table schema | `shared/schema.ts` |
+| P2.6-03 | [ ] | Implement food logging API endpoints | `server/routes.ts` |
+
+### 2.6.2 AI-Powered Meal Analysis
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.6-04 | [ ] | Implement AI meal analysis (calorie/protein detection from text/photos) | `server/services/ai-nutrition.ts` (new) |
+| P2.6-05 | [ ] | Add meal photo upload and processing | `client/src/components/nutrition/MealCapture.tsx` (new) |
+| P2.6-06 | [ ] | Create nutrition summary dashboard | `client/src/components/nutrition/NutritionSummary.tsx` (new) |
+
+### 2.6.3 Coach Integration
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.6-07 | [ ] | Add nutrition insights to Coach page | `client/src/pages/Coach.tsx` |
+| P2.6-08 | [ ] | Integrate calorie/protein tracking with workout data | `server/services/ai-context.ts` |
+| P2.6-09 | [ ] | Add proactive nutrition recommendations based on training load | `server/services/ai-notifications.ts` |
+
+---
+
 ## Phase 3: Gamification System
 
 *Goal: Make progress feel rewarding*
@@ -393,3 +421,6 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 | 2025-11-30 | P1-63 to P1-69 | **Dashboard exercise actions**: SWAP, SKIP, NOTES buttons, exercise database with form cues, Notes sheet, Skip confirmation with swap option, Swap sheet with 3 alternatives |
 | 2025-11-30 | P1-20, P1-21, P1-36, P1-37, P1-22 to P1-24, P1-38, P1-39, P1-28, P1-29, P1-30, P1-32 to P1-35 | **Dashboard & Session UI Audit**: Verified items implemented in code (calendar strip, bottom nav padding, gamification header, card touch targets, progress indicators, large timer, etc.) |
 | 2025-11-30 | P1-18 | **Terminology Unification**: Renamed "Telemetry" tasks to "Health" to align with 3-tab structure and prevent duplicate build efforts |
+| 2025-12-02 | P1-18 wording refresh, P1-19 removed | Clarified Telemetry/HealthPreviewCard consolidation and documented BottomNav as the Health entry point |
+| 2025-12-02 | Onboarding: Back button, Height/Weight steps | **Onboarding enhancements**: Added Back button control, new Height and Weight hybrid input steps with quick options + custom numeric entry, 9-step flow |
+| 2025-12-02 | P1-70, Phase 2.6 added | **Roadmap updates**: Added P1-70 for exercise notes in Active Session, added Phase 2.6 for AI Nutrition & Food Logging |
