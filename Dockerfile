@@ -3,11 +3,11 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
-# Copy package files
-COPY package*.json ./
+# Copy package.json only (not package-lock.json to avoid platform mismatch)
+COPY package.json ./
 
-# Install dependencies (use legacy-peer-deps to handle vite-plugin-pwa compatibility)
-RUN npm ci --legacy-peer-deps
+# Fresh install for Linux Alpine (resolves correct platform-specific binaries like @rollup/rollup-linux-x64-musl)
+RUN npm install --legacy-peer-deps
 
 # Copy source code
 COPY . .
@@ -36,9 +36,9 @@ FROM node:20-alpine AS runner
 
 WORKDIR /app
 
-# Copy package files and install production dependencies
-COPY package*.json ./
-RUN npm ci --omit=dev --legacy-peer-deps
+# Copy package.json and install production dependencies fresh
+COPY package.json ./
+RUN npm install --omit=dev --legacy-peer-deps
 
 # Copy built files from builder
 COPY --from=builder /app/dist ./dist
