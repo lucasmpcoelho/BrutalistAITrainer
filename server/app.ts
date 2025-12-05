@@ -1,6 +1,7 @@
 import { type Server } from "node:http";
 
 import express, { type Express, type Request, Response, NextFunction } from "express";
+import session from "express-session";
 import { registerRoutes } from "./routes";
 
 export function log(message: string, source = "express") {
@@ -27,6 +28,20 @@ app.use(express.json({
   }
 }));
 app.use(express.urlencoded({ extended: false }));
+
+// Session middleware for authentication
+const sessionSecret = process.env.SESSION_SECRET || "iron-ai-dev-secret-change-in-production";
+app.use(session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === "production",
+    httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    sameSite: "lax",
+  },
+}));
 
 app.use((req, res, next) => {
   const start = Date.now();

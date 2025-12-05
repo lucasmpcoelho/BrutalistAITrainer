@@ -1,7 +1,10 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { Terminal, ChevronLeft } from "lucide-react";
+import { Terminal, ChevronLeft, Loader2 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useAuth } from "@/contexts/AuthContext";
+import { saveOnboardingPreferences, getIdToken } from "@/lib/firebase";
 
 // Question configuration for all 9 onboarding steps
 const ONBOARDING_QUESTIONS = [
@@ -62,9 +65,24 @@ const ONBOARDING_QUESTIONS = [
     ],
   },
   {
+    id: "workout_days",
+    prompt: "Select which days you want to train:",
+    systemPrefix: "FREQUENCY LOCKED.\n\n",
+    type: "days" as const, // Special type for day selection
+    options: [
+      { id: "1", label: "Mon" },
+      { id: "2", label: "Tue" },
+      { id: "3", label: "Wed" },
+      { id: "4", label: "Thu" },
+      { id: "5", label: "Fri" },
+      { id: "6", label: "Sat" },
+      { id: "0", label: "Sun" },
+    ],
+  },
+  {
     id: "equipment",
     prompt: "What hardware do you have access to?",
-    systemPrefix: "OPTIMAL FREQUENCY CALCULATED.\n\n",
+    systemPrefix: "TRAINING SCHEDULE LOCKED.\n\n",
     type: "options" as const,
     options: [
       { id: "full_gym", label: "Full Gym" },
@@ -143,19 +161,164 @@ function TypingIndicator() {
   );
 }
 
-// Completion celebration screen
-function CompletionScreen({ onContinue }: { onContinue: () => void }) {
-  const [showButton, setShowButton] = useState(false);
-  const { vibrate } = useHaptics();
+// Status message component with typewriter effect
+function StatusMessage({ message, isLatest }: { message: string; isLatest: boolean }) {
+  return (
+    <div className={`flex items-center gap-2 animate-in fade-in slide-in-from-left-2 duration-300 ${isLatest ? 'text-green-500' : 'text-green-700'}`}>
+      <span className={isLatest ? 'animate-pulse' : ''}>▸</span>
+      <span className="font-mono text-xs uppercase tracking-wider">{message}</span>
+      {isLatest && <span className="animate-pulse">_</span>}
+    </div>
+  );
+}
 
+// Completion celebration screen - auto-starts save/generate on mount
+interface CompletionScreenProps {
+  answers: Record<string, string>;
+  firebaseUser: { uid: string } | null;
+  queryClient: ReturnType<typeof useQueryClient>;
+  onNavigate: () => Promise<void>;
+}
+
+function CompletionScreen({ answers, firebaseUser, queryClient, onNavigate }: CompletionScreenProps) {
+  const [isReady, setIsReady] = useState(false);
+  const [minTimeElapsed, setMinTimeElapsed] = useState(false);
+  const [statusMessages, setStatusMessages] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const { vibrate } = useHaptics();
+  const hasStarted = useRef(false);
+
+  // Helper functions to parse answers
+  function parseHeightToNumber(height: string): number | undefined {
+    if (height.includes("-")) {
+      const [min, max] = height.split("-").map(s => parseInt(s));
+      return Math.round((min + max) / 2);
+    }
+    if (height.endsWith("+")) {
+      return parseInt(height.replace("+", "")) + 5;
+    }
+    return parseInt(height) || undefined;
+  }
+  
+  function parseWeightToNumber(weight: string): number | undefined {
+    if (weight.includes("-")) {
+      const [min, max] = weight.split("-").map(s => parseInt(s));
+      return Math.round((min + max) / 2);
+    }
+    if (weight.endsWith("+")) {
+      return parseInt(weight.replace("+", "")) + 5;
+    }
+    return parseFloat(weight) || undefined;
+  }
+  
+  function parseSessionLength(session: string): number | undefined {
+    const match = session.match(/(\d+)/);
+    return match ? parseInt(match[1]) : undefined;
+  }
+
+  // Start 3-second minimum timer
   useEffect(() => {
-    // Trigger success haptic
-    vibrate("success");
-    
-    // Show button after animation
-    const timer = setTimeout(() => setShowButton(true), 1500);
+    const timer = setTimeout(() => setMinTimeElapsed(true), 3000);
     return () => clearTimeout(timer);
-  }, [vibrate]);
+  }, []);
+
+  // Auto-start save + generate on mount
+  useEffect(() => {
+    if (hasStarted.current) return;
+    hasStarted.current = true;
+
+    async function initializeProgram() {
+      if (!firebaseUser) {
+        setError("No user session found");
+        return;
+      }
+
+      try {
+        // Step 1: Save biometric profile
+        setStatusMessages(["INITIALIZING NEURAL LINK..."]);
+        await new Promise(resolve => setTimeout(resolve, 400));
+        
+        setStatusMessages(prev => [...prev, "SAVING BIOMETRIC PROFILE..."]);
+        
+        // Parse workout days from stored answer
+        const workoutDays = answers.workout_days 
+          ? answers.workout_days.split(",").map(d => parseInt(d))
+          : undefined;
+        
+        // Transform answers to preferences format
+        const preferences = {
+          goal: answers.mission || undefined,
+          heightCm: answers.height ? parseHeightToNumber(answers.height) : undefined,
+          weightKg: answers.weight ? parseWeightToNumber(answers.weight) : undefined,
+          frequency: answers.frequency ? parseInt(answers.frequency) : undefined,
+          equipment: answers.equipment || undefined,
+          experience: answers.experience || undefined,
+          injuries: answers.injuries || undefined,
+          sessionLengthMin: answers.session_length ? parseSessionLength(answers.session_length) : undefined,
+          workoutDays,
+        };
+
+        await saveOnboardingPreferences(firebaseUser.uid, preferences);
+        // NOTE: Do NOT call refetchProfile() here - it would update auth context
+        // and trigger OnboardingRoute to redirect before our 3-second delay.
+        // We call refetchProfile() in onNavigate instead.
+        
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setStatusMessages(prev => [...prev, "PROFILE SYNCHRONIZED ✓"]);
+        
+        // Step 2: Generate workout program
+        await new Promise(resolve => setTimeout(resolve, 400));
+        setStatusMessages(prev => [...prev, "GENERATING TRAINING PROTOCOL..."]);
+        
+        const token = await getIdToken();
+        const response = await fetch("/api/workouts/generate", {
+          method: "POST",
+          headers: { 
+            "Content-Type": "application/json",
+            ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+          },
+          credentials: "include",
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          console.error("Error generating workouts:", errorData);
+          setStatusMessages(prev => [...prev, "PROTOCOL GENERATION WARNING ⚠"]);
+        } else {
+          const result = await response.json();
+          console.log("Generated workouts:", result.workouts?.length || 0);
+          setStatusMessages(prev => [...prev, `${result.workouts?.length || 0} TRAINING DAYS COMPILED ✓`]);
+        }
+        
+        // Step 3: Sync cache
+        await new Promise(resolve => setTimeout(resolve, 300));
+        setStatusMessages(prev => [...prev, "SYNCHRONIZING DATA CACHE..."]);
+        
+        await queryClient.invalidateQueries({ queryKey: ["workouts"] });
+        await queryClient.refetchQueries({ queryKey: ["workouts"] });
+        
+        await new Promise(resolve => setTimeout(resolve, 400));
+        setStatusMessages(prev => [...prev, "ALL SYSTEMS NOMINAL ✓"]);
+        
+        // Final ready state
+        await new Promise(resolve => setTimeout(resolve, 200));
+        setStatusMessages(prev => [...prev, ">>> SYSTEM READY <<<"]);
+        vibrate("success");
+        setIsReady(true);
+        
+      } catch (err) {
+        console.error("Error during initialization:", err);
+        setError("Initialization failed");
+        setStatusMessages(prev => [...prev, "ERROR: INITIALIZATION FAILED"]);
+        // Still allow navigation even on error
+        setIsReady(true);
+      }
+    }
+
+    initializeProgram();
+  }, [answers, firebaseUser, queryClient, vibrate]);
+
+  const canProceed = isReady && minTimeElapsed;
 
   return (
     <div className="fixed inset-0 bg-black flex flex-col items-center justify-center p-8 z-50 animate-in fade-in duration-500">
@@ -163,39 +326,64 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
         CALIBRATION COMPLETE
       </div>
       
-      <h1 className="font-display text-5xl md:text-7xl font-black text-white text-center mb-8 animate-in slide-in-from-bottom-4 duration-700">
+      <h1 className="font-display text-5xl md:text-7xl font-black text-white text-center mb-6 animate-in slide-in-from-bottom-4 duration-700">
         PROTOCOL<br/>GENERATED
       </h1>
       
-      {/* Animated progress bar */}
-      <div className="w-64 h-1 bg-green-900 mb-8 overflow-hidden">
+      {/* Animated progress bar - fills over 3 seconds */}
+      <div className="w-64 h-1 bg-green-900 mb-6 overflow-hidden">
         <div 
-          className="h-full bg-accent transition-all duration-1000 ease-out"
+          className="h-full bg-accent"
           style={{ 
-            width: '100%',
-            animation: 'grow 1s ease-out forwards'
+            width: minTimeElapsed ? '100%' : '0%',
+            transition: 'width 3s ease-out',
+            animation: 'grow 3s ease-out forwards'
           }} 
         />
       </div>
 
-      {/* System readout summary */}
-      <div className="text-green-700 text-xs font-mono uppercase tracking-wider mb-8 text-center animate-in fade-in duration-500 delay-500">
-        <p>ALL SYSTEMS NOMINAL</p>
-        <p className="text-green-500 mt-1">READY FOR DEPLOYMENT</p>
+      {/* Terminal-style status messages */}
+      <div className="w-full max-w-md mb-8 space-y-2 min-h-[180px]">
+        {statusMessages.map((message, index) => (
+          <StatusMessage 
+            key={index} 
+            message={message} 
+            isLatest={index === statusMessages.length - 1 && !canProceed}
+          />
+        ))}
       </div>
+
+      {/* Error message */}
+      {error && (
+        <div className="text-red-500 text-xs font-mono uppercase tracking-wider mb-4 animate-in fade-in duration-300">
+          {error} - You can still continue
+        </div>
+      )}
       
-      {showButton && (
+      {/* Button appears when both ready AND 3 seconds elapsed */}
+      {canProceed && (
         <button 
-          onClick={() => {
+          onClick={async () => {
             vibrate("medium");
-            onContinue();
+            await onNavigate();
           }}
           className="bg-accent text-black px-8 py-4 font-bold uppercase tracking-widest 
             hover:bg-white transition-colors touch-manipulation min-h-[56px]
-            animate-in fade-in slide-in-from-bottom-2 duration-300"
+            animate-in fade-in slide-in-from-bottom-2 duration-300
+            flex items-center gap-2"
         >
           Initialize Training
         </button>
+      )}
+
+      {/* Loading indicator when not ready */}
+      {!canProceed && (
+        <div className="flex items-center gap-2 text-green-700 animate-pulse">
+          <Loader2 className="w-4 h-4 animate-spin" />
+          <span className="text-xs font-mono uppercase tracking-wider">
+            {!isReady ? "Processing..." : "Finalizing..."}
+          </span>
+        </div>
       )}
     </div>
   );
@@ -203,6 +391,7 @@ function CompletionScreen({ onContinue }: { onContinue: () => void }) {
 
 export default function Onboarding() {
   const [, setLocation] = useLocation();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [messages, setMessages] = useState<Message[]>([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -210,8 +399,10 @@ export default function Onboarding() {
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [customInput, setCustomInput] = useState("");
   const [customInputError, setCustomInputError] = useState("");
+  const [selectedDays, setSelectedDays] = useState<number[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { vibrate } = useHaptics();
+  const { firebaseUser, refetchProfile } = useAuth();
 
   const currentQuestion = ONBOARDING_QUESTIONS[step];
   const totalSteps = ONBOARDING_QUESTIONS.length;
@@ -274,7 +465,47 @@ export default function Onboarding() {
       setIsTyping(false);
       setMessages(prev => [...prev, { id: Date.now() + 1, text: systemText, sender: "system" }]);
       setStep(prev => prev + 1);
+      
+      // Reset selected days when moving to a new step
+      setSelectedDays([]);
     }, 500);
+  };
+
+  // Handle day toggle for multi-select
+  const handleDayToggle = (dayId: number) => {
+    vibrate("light");
+    const frequency = parseInt(answers.frequency || "3");
+    
+    setSelectedDays(prev => {
+      if (prev.includes(dayId)) {
+        // Remove day
+        return prev.filter(d => d !== dayId);
+      } else if (prev.length < frequency) {
+        // Add day if we haven't reached the limit
+        return [...prev, dayId].sort((a, b) => a - b);
+      }
+      // Already at limit, don't add
+      return prev;
+    });
+  };
+
+  // Confirm day selection
+  const handleDaysConfirm = () => {
+    const frequency = parseInt(answers.frequency || "3");
+    if (selectedDays.length !== frequency) {
+      vibrate("error");
+      return;
+    }
+    
+    // Store days and create label
+    const dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+    const label = selectedDays.map(d => dayNames[d]).join(", ");
+    
+    // Store as comma-separated string
+    setAnswers(prev => ({ ...prev, workout_days: selectedDays.join(",") }));
+    
+    // Continue with normal flow
+    handleOptionSelect(selectedDays.join(","), label);
   };
 
   const handleCustomInputSubmit = () => {
@@ -324,14 +555,20 @@ export default function Onboarding() {
     setStep(prev => prev - 1);
   };
 
-  const handleComplete = () => {
-    // TODO: Save answers to backend/storage
-    console.log("Onboarding complete with answers:", answers);
-    setLocation("/dashboard");
-  };
-
   if (isComplete) {
-    return <CompletionScreen onContinue={handleComplete} />;
+    return (
+      <CompletionScreen 
+        answers={answers}
+        firebaseUser={firebaseUser}
+        queryClient={queryClient}
+        onNavigate={async () => {
+          // Refresh profile now (marks onboarding complete in auth context)
+          // This must happen right before navigation, not during initialization
+          await refetchProfile();
+          setLocation("/dashboard");
+        }}
+      />
+    );
   }
 
   return (
@@ -415,8 +652,92 @@ export default function Onboarding() {
             </div>
           </div>
           
-          {/* Options Grid */}
-          {currentQuestion && !isTyping && (
+          {/* Day Selection (special multi-select) */}
+          {currentQuestion && currentQuestion.type === "days" && !isTyping && (
+            <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+              {/* Instructions */}
+              <div className="text-green-700 text-xs uppercase tracking-wider mb-3 text-center">
+                Select {answers.frequency || 3} days • {selectedDays.length}/{answers.frequency || 3} selected
+              </div>
+              
+              {/* Days grid */}
+              <div className="grid grid-cols-7 gap-1 mb-4">
+                {currentQuestion.options.map((opt) => {
+                  const dayId = parseInt(opt.id);
+                  const isSelected = selectedDays.includes(dayId);
+                  const frequency = parseInt(answers.frequency || "3");
+                  const canSelect = isSelected || selectedDays.length < frequency;
+                  
+                  return (
+                    <button
+                      key={opt.id}
+                      onClick={() => handleDayToggle(dayId)}
+                      disabled={!canSelect && !isSelected}
+                      className={`min-h-[56px] px-2 py-3 border-2 
+                        transition-colors duration-150
+                        text-sm uppercase tracking-wider font-bold
+                        touch-manipulation
+                        focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black
+                        ${isSelected 
+                          ? 'border-green-500 bg-green-500 text-black' 
+                          : canSelect
+                            ? 'border-green-700 hover:bg-green-500/20'
+                            : 'border-green-900/50 text-green-900/50 cursor-not-allowed'
+                        }`}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
+              
+              {/* Confirm button */}
+              <button
+                onClick={handleDaysConfirm}
+                disabled={selectedDays.length !== parseInt(answers.frequency || "3")}
+                className={`w-full min-h-[56px] px-4 py-3 border-2 
+                  text-sm uppercase tracking-wider font-bold
+                  touch-manipulation transition-colors duration-150
+                  ${selectedDays.length === parseInt(answers.frequency || "3")
+                    ? 'border-green-500 bg-green-500 text-black hover:bg-green-400'
+                    : 'border-green-900 text-green-900 cursor-not-allowed'
+                  }`}
+              >
+                {selectedDays.length === parseInt(answers.frequency || "3")
+                  ? "▸ Confirm Schedule"
+                  : `Select ${parseInt(answers.frequency || "3") - selectedDays.length} more day${parseInt(answers.frequency || "3") - selectedDays.length !== 1 ? 's' : ''}`
+                }
+              </button>
+            </div>
+          )}
+
+          {/* Options Grid (for non-days questions) */}
+          {currentQuestion && currentQuestion.type !== "days" && currentQuestion.type !== "hybrid" && !isTyping && (
+            <div 
+              className={`grid gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+                currentQuestion.options.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'
+              }`}
+            >
+              {currentQuestion.options.map((opt) => (
+                <button
+                  key={opt.id}
+                  onClick={() => handleOptionSelect(opt.id, opt.label)}
+                  className="min-h-[56px] px-4 py-3 border-2 border-green-700 
+                    hover:bg-green-500 hover:text-black active:bg-green-400
+                    transition-colors duration-150
+                    text-sm uppercase tracking-wider font-bold
+                    touch-manipulation
+                    focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 focus:ring-offset-black"
+                >
+                  <span className="text-green-700 mr-2">▸</span>
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* Options Grid for hybrid questions */}
+          {currentQuestion && currentQuestion.type === "hybrid" && !isTyping && (
             <div 
               className={`grid gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300 ${
                 currentQuestion.options.length <= 3 ? 'grid-cols-1 sm:grid-cols-3' : 'grid-cols-2'
@@ -497,7 +818,7 @@ export default function Onboarding() {
         </div>
       </div>
 
-      {/* CSS for grow animation */}
+      {/* CSS for grow animation - 3 second duration for completion screen */}
       <style>{`
         @keyframes grow {
           from { width: 0%; }

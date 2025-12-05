@@ -38,7 +38,7 @@ export default function SkipConfirmSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className="rounded-t-xl border-t-2 border-black p-0 bg-white"
+        className="rounded-t-xl border-t border-gray-200 p-0 bg-white"
       >
         {/* Drag handle */}
         <div className="flex justify-center pt-3 pb-2">
@@ -59,10 +59,10 @@ export default function SkipConfirmSheet({
             <button
               onClick={handleSkip}
               className="flex-1 flex items-center justify-center gap-2 
-                min-h-[56px] border-2 border-black bg-white
+                min-h-[56px] border border-gray-200 bg-white rounded-xl
                 font-mono text-sm font-bold uppercase tracking-wider
-                hover:bg-gray-100 active:bg-gray-200 transition-colors
-                touch-manipulation"
+                hover:bg-gray-50 active:bg-gray-100 transition-colors
+                touch-manipulation shadow-sm text-gray-600"
             >
               <SkipForward className="w-4 h-4" />
               Skip It
@@ -71,10 +71,10 @@ export default function SkipConfirmSheet({
             <button
               onClick={handleSwap}
               className="flex-1 flex items-center justify-center gap-2 
-                min-h-[56px] border-2 border-black bg-black text-white
+                min-h-[56px] bg-black text-white rounded-xl
                 font-mono text-sm font-bold uppercase tracking-wider
-                hover:bg-accent hover:text-black transition-colors
-                touch-manipulation"
+                hover:bg-gray-800 transition-colors
+                touch-manipulation shadow-sm"
             >
               <RefreshCw className="w-4 h-4" />
               Swap Instead
@@ -85,6 +85,9 @@ export default function SkipConfirmSheet({
     </Sheet>
   );
 }
+
+
+
 
 
 

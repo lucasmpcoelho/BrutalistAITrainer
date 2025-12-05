@@ -1,6 +1,40 @@
+# Dependencies
 node_modules
+
+# Build output
 dist
+
+# macOS
 .DS_Store
+
+# Vite
 server/public
 vite.config.ts.*
+
+# Archives
 *.tar.gz
+
+# Environment files (NEVER commit secrets)
+.env
+.env.local
+.env.*.local
+
+# Debug logs
+*.log
+pglite-debug.log
+dataconnect-debug.log
+
+# External datasets (already imported to Firestore)
+free-exercise-db/
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# Firebase emulator data
+.firebase/
+firebase-debug.log
+firestore-debug.log
+ui-debug.log

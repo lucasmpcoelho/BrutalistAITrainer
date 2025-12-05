@@ -1,0 +1,300 @@
+# IRON_AI Queries
+# Firebase Data Connect GraphQL Queries
+#
+# Note: One-to-many relationships use implicit field names like:
+# - workoutExercises_on_workout (from WorkoutExercise.workout)
+# - sets_on_session (from Set.session)
+
+# ============================================================================
+# WORKOUT QUERIES
+# ============================================================================
+
+# Get all workouts for a user (with exercises)
+query GetUserWorkouts($userId: String!) @auth(level: PUBLIC) {
+  workouts(where: { userId: { eq: $userId } }, orderBy: [{ dayOfWeek: ASC }]) {
+    id
+    userId
+    name
+    type
+    dayOfWeek
+    estimatedDurationMin
+    targetMuscles
+    isActive
+    createdAt
+    updatedAt
+    workoutExercises_on_workout(orderBy: [{ orderIndex: ASC }]) {
+      id
+      exerciseId
+      exerciseName
+      orderIndex
+      targetSets
+      targetReps
+      targetRpe
+      restSeconds
+      notes
+    }
+  }
+}
+
+# Get a single workout by ID
+query GetWorkout($id: UUID!) @auth(level: PUBLIC) {
+  workout(id: $id) {
+    id
+    userId
+    name
+    type
+    dayOfWeek
+    estimatedDurationMin
+    targetMuscles
+    isActive
+    createdAt
+    updatedAt
+    workoutExercises_on_workout(orderBy: [{ orderIndex: ASC }]) {
+      id
+      exerciseId
+      exerciseName
+      orderIndex
+      targetSets
+      targetReps
+      targetRpe
+      restSeconds
+      notes
+    }
+  }
+}
+
+# Get workout for a specific day of week
+query GetWorkoutByDay($userId: String!, $dayOfWeek: Int!) @auth(level: PUBLIC) {
+  workouts(
+    where: { userId: { eq: $userId }, dayOfWeek: { eq: $dayOfWeek }, isActive: { eq: true } }
+    limit: 1
+  ) {
+    id
+    userId
+    name
+    type
+    dayOfWeek
+    estimatedDurationMin
+    targetMuscles
+    isActive
+    workoutExercises_on_workout(orderBy: [{ orderIndex: ASC }]) {
+      id
+      exerciseId
+      exerciseName
+      orderIndex
+      targetSets
+      targetReps
+      targetRpe
+      restSeconds
+      notes
+    }
+  }
+}
+
+# ============================================================================
+# WORKOUT EXERCISE QUERIES
+# ============================================================================
+
+# Get exercises for a workout
+query GetWorkoutExercises($workoutId: UUID!) @auth(level: PUBLIC) {
+  workoutExercises(
+    where: { workout: { id: { eq: $workoutId } } }
+    orderBy: [{ orderIndex: ASC }]
+  ) {
+    id
+    exerciseId
+    exerciseName
+    orderIndex
+    targetSets
+    targetReps
+    targetRpe
+    restSeconds
+    notes
+    createdAt
+  }
+}
+
+# ============================================================================
+# SESSION QUERIES
+# ============================================================================
+
+# Get user's sessions (history)
+query GetUserSessions($userId: String!, $limit: Int) @auth(level: PUBLIC) {
+  sessions(
+    where: { userId: { eq: $userId } }
+    orderBy: [{ startedAt: DESC }]
+    limit: $limit
+  ) {
+    id
+    userId
+    workoutName
+    status
+    startedAt
+    completedAt
+    durationSeconds
+    totalVolume
+    exerciseCount
+    setCount
+    notes
+    workout {
+      id
+      type
+    }
+  }
+}
+
+# Get a single session with all sets
+query GetSession($id: UUID!) @auth(level: PUBLIC) {
+  session(id: $id) {
+    id
+    userId
+    workoutName
+    status
+    startedAt
+    completedAt
+    durationSeconds
+    totalVolume
+    exerciseCount
+    setCount
+    notes
+    workout {
+      id
+      name
+      type
+    }
+    sets_on_session(orderBy: [{ completedAt: ASC }]) {
+      id
+      exerciseId
+      exerciseName
+      setNumber
+      weight
+      reps
+      rpe
+      isWarmup
+      isPR
+      notes
+      completedAt
+    }
+  }
+}
+
+# ============================================================================
+# SET QUERIES
+# ============================================================================
+
+# Get sets for a session
+query GetSessionSets($sessionId: UUID!) @auth(level: PUBLIC) {
+  sets(
+    where: { session: { id: { eq: $sessionId } } }
+    orderBy: [{ completedAt: ASC }]
+  ) {
+    id
+    exerciseId
+    exerciseName
+    setNumber
+    weight
+    reps
+    rpe
+    isWarmup
+    isPR
+    notes
+    completedAt
+  }
+}
+
+# ============================================================================
+# PERSONAL RECORDS QUERIES
+# ============================================================================
+
+# Get all PRs for a user
+query GetUserPRs($userId: String!) @auth(level: PUBLIC) {
+  personalRecords(
+    where: { userId: { eq: $userId } }
+    orderBy: [{ achievedAt: DESC }]
+  ) {
+    id
+    userId
+    exerciseId
+    exerciseName
+    recordType
+    value
+    weight
+    reps
+    setId
+    achievedAt
+    previousValue
+  }
+}
+
+# Get PRs for a specific exercise
+query GetExercisePRs($userId: String!, $exerciseId: String!) @auth(level: PUBLIC) {
+  personalRecords(
+    where: { userId: { eq: $userId }, exerciseId: { eq: $exerciseId } }
+    orderBy: [{ achievedAt: DESC }]
+  ) {
+    id
+    recordType
+    value
+    weight
+    reps
+    achievedAt
+    previousValue
+  }
+}
+
+# ============================================================================
+# STREAK QUERIES
+# ============================================================================
+
+# Get user's streak
+query GetUserStreak($userId: String!) @auth(level: PUBLIC) {
+  streaks(where: { userId: { eq: $userId } }, limit: 1) {
+    id
+    userId
+    currentStreak
+    longestStreak
+    lastWorkoutDate
+    streakStartDate
+    updatedAt
+  }
+}
+
+# ============================================================================
+# ACHIEVEMENT QUERIES
+# ============================================================================
+
+# Get all achievements
+query GetAllAchievements @auth(level: PUBLIC) {
+  achievements {
+    id
+    name
+    description
+    category
+    icon
+    requirementType
+    requirementTarget
+    xpReward
+    isSecret
+  }
+}
+
+# Get user's earned achievements
+query GetUserAchievements($userId: String!) @auth(level: PUBLIC) {
+  userAchievements(
+    where: { userId: { eq: $userId } }
+    orderBy: [{ earnedAt: DESC }]
+  ) {
+    id
+    userId
+    earnedAt
+    progress
+    achievement {
+      id
+      name
+      description
+      category
+      icon
+      xpReward
+    }
+  }
+}

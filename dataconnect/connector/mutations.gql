@@ -1,0 +1,304 @@
+# IRON_AI Mutations
+# Firebase Data Connect GraphQL Mutations
+
+# ============================================================================
+# WORKOUT MUTATIONS
+# ============================================================================
+
+# Create a new workout
+mutation CreateWorkout(
+  $userId: String!
+  $name: String!
+  $type: String!
+  $dayOfWeek: Int
+  $estimatedDurationMin: Int
+  $targetMuscles: [String!]
+) @auth(level: PUBLIC) {
+  workout_insert(data: {
+    userId: $userId
+    name: $name
+    type: $type
+    dayOfWeek: $dayOfWeek
+    estimatedDurationMin: $estimatedDurationMin
+    targetMuscles: $targetMuscles
+    isActive: true
+  })
+}
+
+# Update a workout
+mutation UpdateWorkout(
+  $id: UUID!
+  $name: String
+  $type: String
+  $dayOfWeek: Int
+  $estimatedDurationMin: Int
+  $targetMuscles: [String!]
+  $isActive: Boolean
+) @auth(level: PUBLIC) {
+  workout_update(id: $id, data: {
+    name: $name
+    type: $type
+    dayOfWeek: $dayOfWeek
+    estimatedDurationMin: $estimatedDurationMin
+    targetMuscles: $targetMuscles
+    isActive: $isActive
+  })
+}
+
+# Delete a single workout
+mutation DeleteWorkout($id: UUID!) @auth(level: PUBLIC) {
+  workout_delete(id: $id)
+}
+
+# Delete all workouts for a user (for regeneration)
+mutation DeleteUserWorkouts($userId: String!) @auth(level: PUBLIC) {
+  workout_deleteMany(where: { userId: { eq: $userId } })
+}
+
+# ============================================================================
+# WORKOUT EXERCISE MUTATIONS
+# ============================================================================
+
+# Add exercise to workout
+mutation AddWorkoutExercise(
+  $workoutId: UUID!
+  $exerciseId: String!
+  $exerciseName: String!
+  $orderIndex: Int!
+  $targetSets: Int!
+  $targetReps: String!
+  $targetRpe: Float
+  $restSeconds: Int
+  $notes: String
+) @auth(level: PUBLIC) {
+  workoutExercise_insert(data: {
+    workout: { id: $workoutId }
+    exerciseId: $exerciseId
+    exerciseName: $exerciseName
+    orderIndex: $orderIndex
+    targetSets: $targetSets
+    targetReps: $targetReps
+    targetRpe: $targetRpe
+    restSeconds: $restSeconds
+    notes: $notes
+  })
+}
+
+# Update workout exercise
+mutation UpdateWorkoutExercise(
+  $id: UUID!
+  $orderIndex: Int
+  $targetSets: Int
+  $targetReps: String
+  $targetRpe: Float
+  $restSeconds: Int
+  $notes: String
+) @auth(level: PUBLIC) {
+  workoutExercise_update(id: $id, data: {
+    orderIndex: $orderIndex
+    targetSets: $targetSets
+    targetReps: $targetReps
+    targetRpe: $targetRpe
+    restSeconds: $restSeconds
+    notes: $notes
+  })
+}
+
+# Remove exercise from workout
+mutation RemoveWorkoutExercise($id: UUID!) @auth(level: PUBLIC) {
+  workoutExercise_delete(id: $id)
+}
+
+# ============================================================================
+# SESSION MUTATIONS
+# ============================================================================
+
+# Start a new session
+mutation StartSession(
+  $userId: String!
+  $workoutId: UUID
+  $workoutName: String!
+) @auth(level: PUBLIC) {
+  session_insert(data: {
+    userId: $userId
+    workout: { id: $workoutId }
+    workoutName: $workoutName
+    status: "in_progress"
+  })
+}
+
+# Update session (for completion or abandonment)
+mutation UpdateSession(
+  $id: UUID!
+  $status: String
+  $completedAt: Timestamp
+  $durationSeconds: Int
+  $totalVolume: Float
+  $exerciseCount: Int
+  $setCount: Int
+  $notes: String
+) @auth(level: PUBLIC) {
+  session_update(id: $id, data: {
+    status: $status
+    completedAt: $completedAt
+    durationSeconds: $durationSeconds
+    totalVolume: $totalVolume
+    exerciseCount: $exerciseCount
+    setCount: $setCount
+    notes: $notes
+  })
+}
+
+# ============================================================================
+# SET MUTATIONS
+# ============================================================================
+
+# Log a set
+mutation LogSet(
+  $sessionId: UUID!
+  $exerciseId: String!
+  $exerciseName: String!
+  $setNumber: Int!
+  $weight: Float!
+  $reps: Int!
+  $rpe: Float
+  $isWarmup: Boolean
+  $isPR: Boolean
+  $notes: String
+) @auth(level: PUBLIC) {
+  set_insert(data: {
+    session: { id: $sessionId }
+    exerciseId: $exerciseId
+    exerciseName: $exerciseName
+    setNumber: $setNumber
+    weight: $weight
+    reps: $reps
+    rpe: $rpe
+    isWarmup: $isWarmup
+    isPR: $isPR
+    notes: $notes
+  })
+}
+
+# ============================================================================
+# PERSONAL RECORD MUTATIONS
+# ============================================================================
+
+# Create a new PR
+mutation CreatePR(
+  $userId: String!
+  $exerciseId: String!
+  $exerciseName: String!
+  $recordType: String!
+  $value: Float!
+  $weight: Float
+  $reps: Int
+  $setId: UUID
+  $previousValue: Float
+) @auth(level: PUBLIC) {
+  personalRecord_insert(data: {
+    userId: $userId
+    exerciseId: $exerciseId
+    exerciseName: $exerciseName
+    recordType: $recordType
+    value: $value
+    weight: $weight
+    reps: $reps
+    setId: $setId
+    previousValue: $previousValue
+  })
+}
+
+# ============================================================================
+# STREAK MUTATIONS
+# ============================================================================
+
+# Create streak (for new users)
+mutation CreateStreak(
+  $userId: String!
+  $currentStreak: Int!
+  $longestStreak: Int!
+  $lastWorkoutDate: Timestamp
+  $streakStartDate: Timestamp
+) @auth(level: PUBLIC) {
+  streak_insert(data: {
+    userId: $userId
+    currentStreak: $currentStreak
+    longestStreak: $longestStreak
+    lastWorkoutDate: $lastWorkoutDate
+    streakStartDate: $streakStartDate
+  })
+}
+
+# Update existing streak
+mutation UpdateStreak(
+  $id: UUID!
+  $currentStreak: Int
+  $longestStreak: Int
+  $lastWorkoutDate: Timestamp
+  $streakStartDate: Timestamp
+) @auth(level: PUBLIC) {
+  streak_update(id: $id, data: {
+    currentStreak: $currentStreak
+    longestStreak: $longestStreak
+    lastWorkoutDate: $lastWorkoutDate
+    streakStartDate: $streakStartDate
+  })
+}
+
+# ============================================================================
+# ACHIEVEMENT MUTATIONS
+# ============================================================================
+
+# Create an achievement definition
+mutation CreateAchievement(
+  $id: String!
+  $name: String!
+  $description: String!
+  $category: String!
+  $icon: String
+  $requirementType: String!
+  $requirementTarget: Int!
+  $requirementExerciseId: String
+  $xpReward: Int
+  $isSecret: Boolean
+) @auth(level: PUBLIC) {
+  achievement_insert(data: {
+    id: $id
+    name: $name
+    description: $description
+    category: $category
+    icon: $icon
+    requirementType: $requirementType
+    requirementTarget: $requirementTarget
+    requirementExerciseId: $requirementExerciseId
+    xpReward: $xpReward
+    isSecret: $isSecret
+  })
+}
+
+# Award achievement to user
+mutation AwardAchievement(
+  $userId: String!
+  $achievementId: String!
+  $progress: Float
+) @auth(level: PUBLIC) {
+  userAchievement_insert(data: {
+    userId: $userId
+    achievement: { id: $achievementId }
+    progress: $progress
+  })
+}
+
+# Update achievement progress
+mutation UpdateAchievementProgress(
+  $id: UUID!
+  $progress: Float!
+) @auth(level: PUBLIC) {
+  userAchievement_update(id: $id, data: {
+    progress: $progress
+  })
+}
+
+
+

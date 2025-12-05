@@ -1,0 +1,140 @@
+# IRON_AI Database Schema
+# Firebase Data Connect GraphQL Schema
+# Maps to existing Drizzle schema in shared/schema.ts
+#
+# Note: One-to-many relationships are automatically inferred from foreign keys.
+# E.g., WorkoutExercise.workout creates an implicit Workout.workoutExercises_on_workout field.
+
+# ============================================================================
+# WORKOUTS - User's workout templates/plans
+# ============================================================================
+
+type Workout @table {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: String! @col(name: "user_id")
+  name: String!
+  type: String!  # "push" | "pull" | "legs" | "upper" | "lower" | "full" | "rest"
+  dayOfWeek: Int @col(name: "day_of_week")  # 0 = Sunday, 1 = Monday, etc.
+  estimatedDurationMin: Int @col(name: "estimated_duration_min")
+  targetMuscles: [String!] @col(name: "target_muscles")
+  isActive: Boolean @default(expr: "true") @col(name: "is_active")
+  createdAt: Timestamp! @default(expr: "request.time") @col(name: "created_at")
+  updatedAt: Timestamp! @default(expr: "request.time") @col(name: "updated_at")
+}
+
+# ============================================================================
+# WORKOUT EXERCISES - Exercises within a workout template
+# ============================================================================
+
+type WorkoutExercise @table(name: "workout_exercises") {
+  id: UUID! @default(expr: "uuidV4()")
+  workout: Workout!  # Foreign key - creates implicit Workout.workoutExercises_on_workout
+  exerciseId: String! @col(name: "exercise_id")  # References Firestore exercise
+  exerciseName: String! @col(name: "exercise_name")  # Denormalized for display
+  orderIndex: Int! @col(name: "order_index")
+  targetSets: Int! @default(expr: "3") @col(name: "target_sets")
+  targetReps: String! @default(expr: "'8-12'") @col(name: "target_reps")
+  targetRpe: Float @col(name: "target_rpe")  # Rate of Perceived Exertion (1-10)
+  restSeconds: Int @default(expr: "90") @col(name: "rest_seconds")
+  notes: String
+  createdAt: Timestamp! @default(expr: "request.time") @col(name: "created_at")
+}
+
+# ============================================================================
+# SESSIONS - Completed workout instances
+# ============================================================================
+
+type Session @table {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: String! @col(name: "user_id")
+  workout: Workout  # Foreign key - can be null if workout was deleted
+  workoutName: String! @col(name: "workout_name")  # Denormalized
+  status: String! @default(expr: "'in_progress'")  # "in_progress" | "completed" | "abandoned"
+  startedAt: Timestamp! @default(expr: "request.time") @col(name: "started_at")
+  completedAt: Timestamp @col(name: "completed_at")
+  durationSeconds: Int @col(name: "duration_seconds")
+  totalVolume: Float @col(name: "total_volume")  # Total weight × reps
+  exerciseCount: Int @col(name: "exercise_count")
+  setCount: Int @col(name: "set_count")
+  notes: String
+}
+
+# ============================================================================
+# SETS - Individual logged sets
+# ============================================================================
+
+type Set @table(name: "sets") {
+  id: UUID! @default(expr: "uuidV4()")
+  session: Session!  # Foreign key - creates implicit Session.sets_on_session
+  exerciseId: String! @col(name: "exercise_id")  # References Firestore exercise
+  exerciseName: String! @col(name: "exercise_name")  # Denormalized
+  setNumber: Int! @col(name: "set_number")  # 1, 2, 3, etc.
+  weight: Float!  # In kg
+  reps: Int!
+  rpe: Float  # Rate of Perceived Exertion (1-10)
+  isWarmup: Boolean @default(expr: "false") @col(name: "is_warmup")
+  isPR: Boolean @default(expr: "false") @col(name: "is_pr")  # Personal Record flag
+  notes: String
+  completedAt: Timestamp! @default(expr: "request.time") @col(name: "completed_at")
+}
+
+# ============================================================================
+# PERSONAL RECORDS - PRs per exercise
+# ============================================================================
+
+type PersonalRecord @table(name: "personal_records") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: String! @col(name: "user_id")
+  exerciseId: String! @col(name: "exercise_id")
+  exerciseName: String! @col(name: "exercise_name")
+  recordType: String! @col(name: "record_type")  # "1rm" | "max_weight" | "max_reps" | "max_volume"
+  value: Float!  # The PR value
+  weight: Float  # Weight used (for max_reps)
+  reps: Int  # Reps performed (for max_weight)
+  setId: UUID @col(name: "set_id")  # Reference to Set that achieved this
+  achievedAt: Timestamp! @default(expr: "request.time") @col(name: "achieved_at")
+  previousValue: Float @col(name: "previous_value")  # For tracking improvement
+}
+
+# ============================================================================
+# ACHIEVEMENTS - Achievement definitions
+# ============================================================================
+
+type Achievement @table {
+  id: String! @col(name: "id")  # Manual ID like "first_workout", "streak_7"
+  name: String!
+  description: String!
+  category: String!  # "consistency" | "strength" | "volume" | "milestone"
+  icon: String
+  requirementType: String! @col(name: "requirement_type")
+  requirementTarget: Int! @col(name: "requirement_target")
+  requirementExerciseId: String @col(name: "requirement_exercise_id")
+  xpReward: Int @default(expr: "100") @col(name: "xp_reward")
+  isSecret: Boolean @default(expr: "false") @col(name: "is_secret")
+}
+
+# ============================================================================
+# USER ACHIEVEMENTS - Earned achievements (join table)
+# ============================================================================
+
+type UserAchievement @table(name: "user_achievements") {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: String! @col(name: "user_id")
+  achievement: Achievement!  # Foreign key - creates implicit Achievement.userAchievements_on_achievement
+  earnedAt: Timestamp! @default(expr: "request.time") @col(name: "earned_at")
+  progress: Float @default(expr: "0")  # 0-1 for partial progress
+}
+
+# ============================================================================
+# STREAKS - Consecutive workout days tracking
+# ============================================================================
+
+type Streak @table {
+  id: UUID! @default(expr: "uuidV4()")
+  userId: String! @col(name: "user_id") @unique  # One streak per user
+  currentStreak: Int! @default(expr: "0") @col(name: "current_streak")
+  longestStreak: Int! @default(expr: "0") @col(name: "longest_streak")
+  lastWorkoutDate: Timestamp @col(name: "last_workout_date")
+  streakStartDate: Timestamp @col(name: "streak_start_date")
+  updatedAt: Timestamp! @default(expr: "request.time") @col(name: "updated_at")
+}

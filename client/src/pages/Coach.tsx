@@ -41,7 +41,7 @@ type Message = {
 function TypingIndicator() {
   return (
     <div className="flex items-start animate-in fade-in duration-200">
-      <div className="bg-gray-100 border-2 border-black p-4 max-w-[80%]">
+      <div className="bg-gray-100 border border-gray-200 p-4 max-w-[80%] rounded-2xl rounded-tl-none">
         <div className="flex gap-1.5">
           <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:0ms]" />
           <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:150ms]" />
@@ -204,13 +204,13 @@ export default function Coach() {
               key={msg.id} 
               className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-200`}
             >
-              <div className={`max-w-[80%] p-4 border-2 ${
+              <div className={`max-w-[80%] p-4 border rounded-2xl ${
                 msg.sender === "ai" 
-                  ? "border-black bg-gray-100 text-black" 
-                  : "border-black bg-black text-white"
+                  ? "border-gray-200 bg-gray-50 text-gray-800 rounded-tl-none" 
+                  : "border-black bg-black text-white rounded-tr-none"
               }`}>
                 <p className="whitespace-pre-line text-sm leading-relaxed">{msg.text}</p>
-                <span className="text-[10px] opacity-50 mt-2 block">
+                <span className={`text-[10px] opacity-50 mt-2 block ${msg.sender === "user" ? "text-gray-400" : "text-gray-500"}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
@@ -223,22 +223,22 @@ export default function Coach() {
         </div>
 
         {/* Chat input */}
-        <div className="fixed bottom-16 inset-x-0 bg-white border-t-2 border-black p-4 safe-area-bottom">
+        <div className="fixed bottom-16 inset-x-0 bg-white border-t border-gray-200 p-4 safe-area-bottom">
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask your coach..."
-              className="flex-1 px-4 py-3 border-2 border-black font-mono text-sm 
-                focus:outline-none focus:border-accent bg-transparent"
+              className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-mono text-sm 
+                focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-gray-50"
             />
             <button
               type="submit"
               disabled={!inputValue.trim()}
-              className="w-12 h-12 bg-black text-white flex items-center justify-center 
+              className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center 
                 disabled:opacity-50 disabled:cursor-not-allowed
-                hover:bg-accent hover:text-black transition-colors touch-manipulation"
+                hover:bg-gray-800 transition-colors touch-manipulation shadow-sm"
             >
               <Send className="w-5 h-5" />
             </button>
@@ -257,16 +257,16 @@ export default function Coach() {
         
         {/* Proactive AI Insight Card */}
         {!insightDismissed && (
-          <div className="border-2 border-black bg-white p-5 brutal-shadow animate-in fade-in slide-in-from-top-4 duration-300">
+          <div className="border border-gray-200 bg-white p-5 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-accent flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
                 <Bot className="w-6 h-6 text-black" />
               </div>
               <div>
                 <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
                   IRON_AI INSIGHT
                 </div>
-                <p className="text-sm leading-relaxed">
+                <p className="text-sm leading-relaxed text-gray-700">
                   {PROACTIVE_INSIGHT.message}
                 </p>
               </div>
@@ -278,10 +278,10 @@ export default function Coach() {
                   key={action}
                   onClick={() => handleInsightAction(action)}
                   className={`flex-1 py-3 font-mono text-xs font-bold uppercase tracking-wider 
-                    border-2 border-black touch-manipulation transition-colors ${
+                    border rounded-lg touch-manipulation transition-colors ${
                     action.includes("Yes") 
-                      ? "bg-black text-white hover:bg-accent hover:text-black" 
-                      : "bg-white text-black hover:bg-gray-100"
+                      ? "bg-black text-white border-black hover:bg-gray-900" 
+                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
                   }`}
                 >
                   {action}
@@ -309,11 +309,12 @@ export default function Coach() {
                   key={action.id}
                   onClick={() => handleQuickAction(action.id)}
                   className="flex flex-col items-center justify-center p-4 min-h-[100px]
-                    border-2 border-black bg-white hover:bg-black hover:text-white
-                    transition-colors touch-manipulation group"
+                    border border-gray-200 bg-white rounded-xl shadow-sm
+                    hover:border-gray-300 hover:bg-gray-50
+                    transition-all touch-manipulation group active:scale-[0.98]"
                 >
-                  <Icon className="w-6 h-6 mb-2 group-hover:text-accent transition-colors" />
-                  <span className="font-mono text-xs font-bold uppercase tracking-wider">
+                  <Icon className="w-6 h-6 mb-2 text-gray-700 group-hover:text-black transition-colors" />
+                  <span className="font-mono text-xs font-bold uppercase tracking-wider text-gray-600 group-hover:text-black">
                     {action.label}
                   </span>
                 </button>
@@ -326,8 +327,8 @@ export default function Coach() {
         {messages.length > 0 && (
           <button
             onClick={() => setIsExpanded(true)}
-            className="w-full border-2 border-gray-300 bg-gray-50 p-4 text-left 
-              hover:border-black transition-colors touch-manipulation"
+            className="w-full border border-gray-200 bg-gray-50 p-4 text-left rounded-xl
+              hover:bg-gray-100 transition-colors touch-manipulation"
           >
             <div className="text-[10px] font-bold uppercase text-gray-500 mb-2">
               Recent Conversation
@@ -335,22 +336,22 @@ export default function Coach() {
             <p className="text-sm text-gray-700 line-clamp-2">
               {messages[messages.length - 1]?.text}
             </p>
-            <span className="text-xs text-accent font-bold mt-2 block">
-              Tap to continue →
+            <span className="text-xs text-black font-bold mt-2 block flex items-center gap-1">
+              Tap to continue <span className="text-lg">→</span>
             </span>
           </button>
         )}
       </main>
 
       {/* Persistent chat input (collapsed) */}
-      <div className="fixed bottom-16 inset-x-0 bg-white border-t-2 border-black p-4">
+      <div className="fixed bottom-16 inset-x-0 bg-white border-t border-gray-200 p-4">
         <button
           onClick={() => {
             vibrate("light");
             setIsExpanded(true);
           }}
-          className="w-full flex items-center gap-3 px-4 py-3 border-2 border-gray-300 
-            text-gray-500 hover:border-black hover:text-black transition-colors touch-manipulation"
+          className="w-full flex items-center gap-3 px-4 py-3 border border-gray-200 rounded-xl
+            bg-gray-50 text-gray-500 hover:bg-gray-100 hover:border-gray-300 transition-colors touch-manipulation"
         >
           <MessageSquare className="w-5 h-5" />
           <span className="font-mono text-sm">Ask your coach anything...</span>
@@ -359,6 +360,9 @@ export default function Coach() {
     </div>
   );
 }
+
+
+
 
 
 

@@ -1,3 +1,4 @@
+import "dotenv/config";
 import fs from "node:fs";
 import { type Server } from "node:http";
 import path from "node:path";
@@ -34,8 +35,20 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+  
+  // SPA fallback - only for non-API GET requests
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
+    
+    // Skip API routes - they should be handled by Express routes
+    if (url.startsWith("/api/") || url.startsWith("/health")) {
+      return next();
+    }
+    
+    // Only handle GET requests for SPA fallback
+    if (req.method !== "GET") {
+      return next();
+    }
 
     try {
       const clientTemplate = path.resolve(

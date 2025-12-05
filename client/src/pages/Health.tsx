@@ -88,7 +88,7 @@ function SleepBar({ rem, deep, light, total, target }: {
 
   return (
     <div className="space-y-2">
-      <div className="h-6 flex overflow-hidden border-2 border-black">
+      <div className="h-6 flex overflow-hidden border border-gray-300 rounded-lg">
         <div className="bg-indigo-600 h-full" style={{ width: `${remPercent}%` }} />
         <div className="bg-indigo-400 h-full" style={{ width: `${deepPercent}%` }} />
         <div className="bg-indigo-200 h-full" style={{ width: `${lightPercent}%` }} />
@@ -128,17 +128,17 @@ export default function Health() {
       <main className="flex-1 p-4 space-y-4">
         
         {/* Connection Status */}
-        <div className="flex items-center justify-between border-2 border-black bg-white p-3">
+        <div className="flex items-center justify-between border border-gray-200 rounded-xl bg-white p-3 shadow-sm">
           <div className="flex items-center gap-3">
-            <Watch className="w-5 h-5" />
+            <Watch className="w-5 h-5 text-gray-700" />
             <div>
-              <div className="text-xs font-bold uppercase">Apple Watch Ultra 2</div>
+              <div className="text-xs font-bold uppercase text-gray-800">Apple Watch Ultra 2</div>
               <div className="text-[10px] text-gray-500 font-mono">
                 {isConnected ? "SYNCED 2 MIN AGO" : "NOT CONNECTED"}
               </div>
             </div>
           </div>
-          <div className={`flex items-center gap-2 px-2 py-1 text-[10px] font-bold uppercase ${
+          <div className={`flex items-center gap-2 px-2 py-1 text-[10px] font-bold uppercase rounded-md ${
             isConnected ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
           }`}>
             <span className={`w-2 h-2 rounded-full ${isConnected ? "bg-green-500 animate-pulse" : "bg-red-500"}`} />
@@ -147,7 +147,7 @@ export default function Health() {
         </div>
 
         {/* Recovery Score Card - Main Metric */}
-        <div className="border-2 border-black bg-white p-5 brutal-shadow">
+        <div className="border border-gray-200 bg-white p-5 rounded-xl shadow-sm">
           <div className="flex items-start justify-between mb-4">
             <div>
               <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
@@ -160,7 +160,7 @@ export default function Health() {
                 <span className="text-xl text-gray-400">/ 100</span>
               </div>
             </div>
-            <div className={`px-3 py-1 text-xs font-bold uppercase ${
+            <div className={`px-3 py-1 text-xs font-bold uppercase rounded-md ${
               MOCK_DATA.recovery.score >= 80 ? "bg-green-100 text-green-700" :
               MOCK_DATA.recovery.score >= 60 ? "bg-yellow-100 text-yellow-700" :
               "bg-red-100 text-red-700"
@@ -170,15 +170,15 @@ export default function Health() {
           </div>
           
           {/* Recovery bar */}
-          <div className="h-3 bg-gray-200 mb-4 overflow-hidden">
+          <div className="h-3 bg-gray-100 mb-4 overflow-hidden rounded-full">
             <div 
-              className={`h-full ${recoveryColor.split(" ")[1]} transition-all duration-500`}
+              className={`h-full ${recoveryColor.split(" ")[1]} transition-all duration-500 rounded-full`}
               style={{ width: `${MOCK_DATA.recovery.score}%` }}
             />
           </div>
 
           {/* AI Recommendation */}
-          <div className="flex gap-3 p-3 bg-gray-50 border border-gray-200">
+          <div className="flex gap-3 p-3 bg-gray-50 border border-gray-100 rounded-lg">
             <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
             <p className="text-xs leading-relaxed text-gray-700">
               {MOCK_DATA.recovery.recommendation}
@@ -189,11 +189,11 @@ export default function Health() {
         {/* HRV and Resting HR - Grid */}
         <div className="grid grid-cols-2 gap-3">
           {/* HRV Card */}
-          <div className="border-2 border-black bg-white p-4">
+          <div className="border border-gray-200 bg-white p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Activity className="w-4 h-4" />
-                <span className="text-[10px] font-bold uppercase">HRV</span>
+                <Activity className="w-4 h-4 text-gray-700" />
+                <span className="text-[10px] font-bold uppercase text-gray-600">HRV</span>
               </div>
               <div className={`flex items-center gap-1 text-[10px] font-bold ${
                 MOCK_DATA.hrv.trend === "down" ? "text-red-500" : "text-green-500"
@@ -204,23 +204,23 @@ export default function Health() {
             </div>
             
             <div className="flex items-baseline gap-1 mb-3">
-              <span className="font-display text-3xl font-black">{MOCK_DATA.hrv.current}</span>
+              <span className="font-display text-3xl font-black text-black">{MOCK_DATA.hrv.current}</span>
               <span className="text-sm text-gray-400">ms</span>
             </div>
 
             <Sparkline data={MOCK_DATA.hrv.history} highlight="low" />
             
-            <div className="text-[10px] text-gray-500 mt-2 font-mono">
+            <div className="text-[10px] text-gray-400 mt-2 font-mono">
               Baseline: {MOCK_DATA.hrv.baseline}ms
             </div>
           </div>
 
           {/* Resting HR Card */}
-          <div className="border-2 border-black bg-white p-4">
+          <div className="border border-gray-200 bg-white p-4 rounded-xl shadow-sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2">
-                <Heart className="w-4 h-4" />
-                <span className="text-[10px] font-bold uppercase">Rest HR</span>
+                <Heart className="w-4 h-4 text-gray-700" />
+                <span className="text-[10px] font-bold uppercase text-gray-600">Rest HR</span>
               </div>
               <div className={`flex items-center gap-1 text-[10px] font-bold ${
                 MOCK_DATA.restingHR.trend === "up" ? "text-yellow-500" : "text-green-500"
@@ -231,34 +231,34 @@ export default function Health() {
             </div>
             
             <div className="flex items-baseline gap-1 mb-3">
-              <span className="font-display text-3xl font-black">{MOCK_DATA.restingHR.current}</span>
+              <span className="font-display text-3xl font-black text-black">{MOCK_DATA.restingHR.current}</span>
               <span className="text-sm text-gray-400">bpm</span>
             </div>
 
             <Sparkline data={MOCK_DATA.restingHR.history} highlight="high" />
             
-            <div className="text-[10px] text-gray-500 mt-2 font-mono">
+            <div className="text-[10px] text-gray-400 mt-2 font-mono">
               Baseline: {MOCK_DATA.restingHR.baseline}bpm
             </div>
           </div>
         </div>
 
         {/* Sleep Card */}
-        <div className="border-2 border-black bg-white p-4">
+        <div className="border border-gray-200 bg-white p-4 rounded-xl shadow-sm">
           <div className="flex items-center justify-between mb-4">
             <div className="flex items-center gap-2">
-              <Moon className="w-4 h-4" />
-              <span className="text-[10px] font-bold uppercase">Sleep</span>
+              <Moon className="w-4 h-4 text-gray-700" />
+              <span className="text-[10px] font-bold uppercase text-gray-600">Sleep</span>
             </div>
             {MOCK_DATA.sleep.debt > 0 && (
-              <span className="text-[10px] font-bold text-red-500">
+              <span className="text-[10px] font-bold text-red-500 bg-red-50 px-2 py-0.5 rounded">
                 -{MOCK_DATA.sleep.debt}m DEBT
               </span>
             )}
           </div>
 
           <div className="flex items-baseline gap-2 mb-4">
-            <span className="font-display text-4xl font-black">{MOCK_DATA.sleep.total}</span>
+            <span className="font-display text-4xl font-black text-black">{MOCK_DATA.sleep.total}</span>
             <span className="text-lg text-gray-400">/ {MOCK_DATA.sleep.target}h target</span>
           </div>
 
@@ -274,9 +274,9 @@ export default function Health() {
         {/* HealthKit Connection CTA */}
         <button 
           onClick={() => vibrate("medium")}
-          className="w-full border-2 border-dashed border-gray-400 p-4 
+          className="w-full border border-dashed border-gray-300 rounded-xl p-4 
             text-gray-500 hover:border-black hover:text-black transition-colors
-            flex items-center justify-center gap-3 touch-manipulation"
+            flex items-center justify-center gap-3 touch-manipulation hover:bg-gray-50"
         >
           <Smartphone className="w-5 h-5" />
           <span className="text-xs font-bold uppercase">
@@ -287,6 +287,9 @@ export default function Health() {
     </div>
   );
 }
+
+
+
 
 
 

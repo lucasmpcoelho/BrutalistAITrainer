@@ -1,16 +1,20 @@
+/**
+ * HealthPreviewCard (aka Telemetry)
+ * 
+ * Displays a preview of health/biometrics data synced from wearables.
+ * Formerly named "Telemetry" - aligned to "HealthPreviewCard" per roadmap P1-18.
+ */
 import { 
   Activity, 
   Watch, 
-  Smartphone, 
   RefreshCw, 
-  Zap, 
-  Heart, 
   Moon,
   Wifi
 } from "lucide-react";
 import { useState, useEffect } from "react";
 
-export default function Telemetry() {
+// Named export for new naming convention
+export function HealthPreviewCard() {
   const [syncState, setSyncState] = useState<"idle" | "syncing" | "connected">("idle");
   const [hrv, setHrv] = useState(104);
   
@@ -120,3 +124,9 @@ export default function Telemetry() {
     </div>
   );
 }
+
+// Default export for backwards compatibility
+export default HealthPreviewCard;
+
+// Alias for legacy code
+export { HealthPreviewCard as Telemetry };

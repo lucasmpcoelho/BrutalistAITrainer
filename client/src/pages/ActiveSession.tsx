@@ -1,39 +1,128 @@
-import { useState, useEffect } from "react";
-import { Link, useLocation } from "wouter";
+import { useState, useEffect, useMemo } from "react";
+import { useLocation, useSearch } from "wouter";
 import { 
-  Activity, 
-  Clock, 
   Check, 
-  X, 
-  ChevronRight, 
-  RotateCcw, 
-  Maximize2,
-  Play,
-  Pause,
-  SkipForward
+  SkipForward,
+  Plus,
+  Minus,
+  BookOpen,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
+import { useHaptics } from "@/hooks/use-haptics";
+import { useExercise } from "@/hooks/use-exercise";
+import { useWorkout } from "@/hooks/use-workouts";
+import { 
+  useStartSession, 
+  useLogSet, 
+  useCompleteSession,
+  useActiveSession 
+} from "@/hooks/use-sessions";
+import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
 
-// Mock Data (Same as Dashboard for consistency)
-const workout = [
-  { id: 1, name: "Barbell Squat", sets: 3, reps: "5", rpe: "8", rest: 180, last: "140kg x 5" },
-  { id: 2, name: "Romanian Deadlift", sets: 3, reps: "8", rpe: "7", rest: 120, last: "110kg x 8" },
-  { id: 3, name: "Walking Lunges", sets: 3, reps: "12", rpe: "9", rest: 90, last: "24kg x 12" },
-  { id: 4, name: "Leg Extension", sets: 4, reps: "15", rpe: "10", rest: 60, last: "65kg x 15" },
-];
+// Exercise type for local session state
+interface SessionExercise {
+  id: string;
+  exerciseId: string;
+  name: string;
+  targetSets: number;
+  targetReps: string;
+  targetRpe: number | null;
+  restSeconds: number;
+  orderIndex: number;
+}
 
 export default function ActiveSession() {
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
+  const searchParams = useSearch();
+  
+  // Parse workout ID from URL
+  const workoutId = useMemo(() => {
+    const params = new URLSearchParams(searchParams);
+    return params.get("workoutId");
+  }, [searchParams]);
+
+  // Fetch workout data
+  const { data: workoutData, isLoading: isWorkoutLoading } = useWorkout(workoutId);
+  
+  // Session state
+  const [sessionId, setSessionId] = useState<string | null>(null);
   const [currentExerciseIdx, setCurrentExerciseIdx] = useState(0);
   const [currentSet, setCurrentSet] = useState(1);
   const [isResting, setIsResting] = useState(false);
   const [restTimer, setRestTimer] = useState(0);
   const [sessionDuration, setSessionDuration] = useState(0);
+  const [isInitializing, setIsInitializing] = useState(true);
   
+  // Input state
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
-  const currentExercise = workout[currentExerciseIdx];
-  const isLastSet = currentSet === currentExercise.sets;
-  const isLastExercise = currentExerciseIdx === workout.length - 1;
+  const [notesOpen, setNotesOpen] = useState(false);
+  
+  const { vibrate } = useHaptics();
+
+  // Session hooks
+  const startSession = useStartSession();
+  const logSet = useLogSet();
+  const completeSession = useCompleteSession();
+  const { session: existingActiveSession } = useActiveSession();
+
+  // Build exercises array from workout data
+  const exercises: SessionExercise[] = useMemo(() => {
+    if (!workoutData?.exercises) return [];
+    return workoutData.exercises
+      .sort((a, b) => a.orderIndex - b.orderIndex)
+      .map((ex) => ({
+        id: ex.id,
+        exerciseId: ex.exerciseId,
+        name: ex.exerciseName,
+        targetSets: ex.targetSets,
+        targetReps: ex.targetReps,
+        targetRpe: ex.targetRpe,
+        restSeconds: ex.restSeconds || 90,
+        orderIndex: ex.orderIndex,
+      }));
+  }, [workoutData]);
+
+  const currentExercise = exercises[currentExerciseIdx];
+  const isLastSet = currentExercise ? currentSet === currentExercise.targetSets : false;
+  const isLastExercise = currentExerciseIdx === exercises.length - 1;
+  
+  // Fetch exercise data from API for notes sheet
+  const { data: exerciseData } = useExercise(currentExercise?.exerciseId || null);
+
+  // Initialize session on mount
+  useEffect(() => {
+    const initSession = async () => {
+      // Check for existing active session
+      if (existingActiveSession) {
+        console.log("[ActiveSession] Resuming existing session:", existingActiveSession.id);
+        setSessionId(existingActiveSession.id);
+        setIsInitializing(false);
+        return;
+      }
+
+      // Create new session if we have workout data
+      if (workoutData && !sessionId) {
+        try {
+          const newSession = await startSession.mutateAsync({
+            workoutId: workoutData.id,
+            workoutName: workoutData.name,
+          });
+          console.log("[ActiveSession] Created new session:", newSession.id);
+          setSessionId(newSession.id);
+        } catch (error) {
+          console.error("[ActiveSession] Failed to create session:", error);
+        }
+      }
+      
+      setIsInitializing(false);
+    };
+
+    if (workoutData && !isWorkoutLoading) {
+      initSession();
+    }
+  }, [workoutData, isWorkoutLoading, existingActiveSession, sessionId, startSession]);
 
   // Session Timer
   useEffect(() => {
@@ -62,13 +151,48 @@ export default function ActiveSession() {
     return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
   };
 
-  const handleLogSet = () => {
+  const handleLogSet = async () => {
+    if (!currentExercise || !sessionId) return;
+    
+    const weight = parseFloat(weightInput) || 0;
+    const reps = parseInt(repsInput) || 0;
+    
+    vibrate("success");
+
+    // Log set to API
+    try {
+      const result = await logSet.mutateAsync({
+        sessionId,
+        data: {
+          exerciseId: currentExercise.exerciseId,
+          exerciseName: currentExercise.name,
+          setNumber: currentSet,
+          weight,
+          reps,
+          rpe: currentExercise.targetRpe ?? undefined,
+          isWarmup: false,
+        },
+      });
+      
+      console.log("[ActiveSession] Logged set:", result);
+      
+      // Show PR celebration if applicable
+      if (result.isPR) {
+        vibrate("success");
+        // TODO: Show PR celebration modal
+      }
+    } catch (error) {
+      console.error("[ActiveSession] Failed to log set:", error);
+      // Continue anyway - local state will track progress
+    }
+
     setWeightInput("");
     setRepsInput("");
 
     if (isLastSet) {
       if (isLastExercise) {
-        setLocation("/dashboard");
+        // Complete the session
+        await handleCompleteSession();
       } else {
         setCurrentExerciseIdx(prev => prev + 1);
         setCurrentSet(1);
@@ -80,19 +204,102 @@ export default function ActiveSession() {
     }
   };
 
+  const handleCompleteSession = async () => {
+    if (sessionId) {
+      try {
+        await completeSession.mutateAsync({ id: sessionId });
+        console.log("[ActiveSession] Session completed");
+      } catch (error) {
+        console.error("[ActiveSession] Failed to complete session:", error);
+      }
+    }
+    vibrate("success");
+    setLocation("/dashboard");
+  };
+
+  const handleAbort = async () => {
+    if (sessionId) {
+      try {
+        await completeSession.mutateAsync({ 
+          id: sessionId, 
+          notes: "Workout abandoned" 
+        });
+      } catch (error) {
+        console.error("[ActiveSession] Failed to abandon session:", error);
+      }
+    }
+    setLocation("/dashboard");
+  };
+
   const startRest = () => {
-    setRestTimer(currentExercise.rest);
-    setIsResting(true);
+    if (currentExercise) {
+      setRestTimer(currentExercise.restSeconds);
+      setIsResting(true);
+    }
   };
 
   const skipRest = () => {
+    vibrate("medium");
     setRestTimer(0);
     setIsResting(false);
   };
 
   const addRest = (seconds: number) => {
-    setRestTimer(prev => prev + seconds);
+    vibrate("light");
+    setRestTimer(prev => Math.max(0, prev + seconds));
   };
+  
+  // Quick adjust handlers with haptics
+  const adjustWeight = (delta: number) => {
+    vibrate("light");
+    const current = parseFloat(weightInput) || 0;
+    const newValue = Math.max(0, current + delta);
+    setWeightInput(newValue === 0 ? "" : newValue.toString());
+  };
+  
+  const adjustReps = (delta: number) => {
+    vibrate("light");
+    const current = parseInt(repsInput) || 0;
+    const newValue = Math.max(0, current + delta);
+    setRepsInput(newValue === 0 ? "" : newValue.toString());
+  };
+  
+  const handleNotesClick = () => {
+    vibrate("light");
+    setNotesOpen(true);
+  };
+
+  // Loading state
+  if (isWorkoutLoading || isInitializing) {
+    return (
+      <div className="min-h-screen bg-black text-white flex flex-col items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin mb-4" />
+        <p className="font-mono text-sm uppercase">Loading workout...</p>
+      </div>
+    );
+  }
+
+  // Error state - no workout found
+  if (!workoutData || exercises.length === 0) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
+        <AlertCircle className="w-12 h-12 text-red-500 mb-4" />
+        <h1 className="font-display text-2xl font-bold mb-2">No Workout Found</h1>
+        <p className="text-gray-500 text-center mb-6">
+          {!workoutId 
+            ? "No workout ID provided. Start a workout from the dashboard."
+            : "The requested workout could not be found."
+          }
+        </p>
+        <button
+          onClick={() => setLocation("/dashboard")}
+          className="px-6 py-3 bg-black text-white font-mono text-sm uppercase"
+        >
+          Back to Dashboard
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background text-foreground font-mono flex flex-col selection:bg-accent selection:text-black">
@@ -106,7 +313,10 @@ export default function ActiveSession() {
         <div className="font-display text-2xl font-bold tracking-tighter h-10 flex items-center">
           {formatTime(sessionDuration)}
         </div>
-        <button onClick={() => setLocation("/dashboard")} className="text-xs font-bold uppercase hover:text-red-500 transition-colors h-10 flex items-center">
+        <button 
+          onClick={handleAbort} 
+          className="text-xs font-bold uppercase hover:text-red-500 transition-colors h-10 flex items-center"
+        >
           Abort
         </button>
       </header>
@@ -117,7 +327,7 @@ export default function ActiveSession() {
         <div className="h-2 bg-gray-200 w-full">
           <div 
             className="h-full bg-accent transition-all duration-500"
-            style={{ width: `${((currentExerciseIdx * 100) + ((currentSet / currentExercise.sets) * (100 / workout.length)))}%` }} 
+            style={{ width: `${((currentExerciseIdx * 100) + ((currentSet / currentExercise.targetSets) * (100 / exercises.length)))}%` }} 
           ></div>
         </div>
 
@@ -127,62 +337,142 @@ export default function ActiveSession() {
           {/* Exercise Header */}
           <div className="mb-8">
              <div className="text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">
-               Exercise {currentExerciseIdx + 1} of {workout.length}
+               Exercise {currentExerciseIdx + 1} of {exercises.length}
              </div>
              <h1 className="font-display text-4xl md:text-6xl font-black uppercase leading-[0.9]">
                {currentExercise.name}
              </h1>
           </div>
 
-          <div className="mt-4 flex items-center gap-4 text-sm mb-8">
+          <div className="mt-4 flex items-center gap-4 text-sm mb-8 flex-wrap">
              <div className="bg-black text-white px-3 py-1 font-bold">
-               SET {currentSet} / {currentExercise.sets}
+               SET {currentSet} / {currentExercise.targetSets}
              </div>
              <div className="font-bold text-gray-500">
-               TARGET: <span className="text-black">{currentExercise.reps} REPS</span>
+               TARGET: <span className="text-black">{currentExercise.targetReps} REPS</span>
              </div>
-             <div className="font-bold text-gray-500">
-               RPE: <span className="text-black">{currentExercise.rpe}</span>
-             </div>
+             {currentExercise.targetRpe && (
+               <div className="font-bold text-gray-500">
+                 RPE: <span className="text-black">{currentExercise.targetRpe}</span>
+               </div>
+             )}
            </div>
 
           {/* Data Entry Card */}
-          <div className="border-2 border-black p-6 md:p-10 bg-white brutal-shadow-lg relative flex-1 flex flex-col justify-center">
-            {/* Previous Performance Ghost */}
-            <div className="absolute top-4 right-4 text-xs font-bold text-gray-400 text-right">
-              LAST SESSION<br/>
-              <span className="text-black text-lg">{currentExercise.last}</span>
+          <div className="border-2 border-black p-4 md:p-8 bg-white brutal-shadow-lg relative flex-1 flex flex-col justify-center">
+            {/* Notes Button */}
+            <div className="flex items-start justify-end mb-6">
+              <button
+                onClick={handleNotesClick}
+                className="flex items-center gap-2 px-3 py-2 border-2 border-black 
+                  font-mono text-xs font-bold uppercase
+                  hover:bg-black hover:text-white transition-colors touch-manipulation"
+              >
+                <BookOpen className="w-4 h-4" />
+                Form Cues
+              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold uppercase text-gray-500">Weight (kg)</label>
-                <input 
-                  type="tel" 
-                  value={weightInput}
-                  onChange={(e) => setWeightInput(e.target.value)}
-                  placeholder="0"
-                  autoFocus
-                  className="w-full text-5xl md:text-7xl font-display font-black border-b-4 border-gray-200 focus:border-accent focus:outline-none bg-transparent placeholder-gray-200 transition-colors"
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-bold uppercase text-gray-500">Reps</label>
-                <input 
-                  type="tel" 
-                  value={repsInput}
-                  onChange={(e) => setRepsInput(e.target.value)}
-                  placeholder="0"
-                  className="w-full text-5xl md:text-7xl font-display font-black border-b-4 border-gray-200 focus:border-accent focus:outline-none bg-transparent placeholder-gray-200 transition-colors"
-                />
+            {/* Weight Input with +/- buttons */}
+            <div className="mb-6">
+              <label className="text-xs font-bold uppercase text-gray-500 mb-2 block">
+                Weight (kg)
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => adjustWeight(-2.5)}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
+                    border-2 border-black bg-gray-100 
+                    hover:bg-black hover:text-white active:bg-gray-800
+                    transition-colors touch-manipulation"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-h-[60px] flex items-center">
+                  <input 
+                    type="tel"
+                    inputMode="decimal"
+                    value={weightInput}
+                    onChange={(e) => setWeightInput(e.target.value)}
+                    placeholder="0"
+                    autoFocus
+                    className="w-full text-4xl md:text-5xl font-display font-black 
+                      border-b-4 border-gray-200 focus:border-accent focus:outline-none 
+                      bg-transparent placeholder-gray-200 transition-colors text-center"
+                  />
+                </div>
+                <button
+                  onClick={() => adjustWeight(2.5)}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
+                    border-2 border-black bg-gray-100 
+                    hover:bg-black hover:text-white active:bg-gray-800
+                    transition-colors touch-manipulation"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
               </div>
             </div>
 
+            {/* Reps Input with +/- buttons */}
+            <div className="mb-8">
+              <label className="text-xs font-bold uppercase text-gray-500 mb-2 block">
+                Reps
+              </label>
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={() => adjustReps(-1)}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
+                    border-2 border-black bg-gray-100 
+                    hover:bg-black hover:text-white active:bg-gray-800
+                    transition-colors touch-manipulation"
+                >
+                  <Minus className="w-5 h-5" />
+                </button>
+                <div className="flex-1 min-h-[60px] flex items-center">
+                  <input 
+                    type="tel"
+                    inputMode="numeric"
+                    value={repsInput}
+                    onChange={(e) => setRepsInput(e.target.value)}
+                    placeholder="0"
+                    className="w-full text-4xl md:text-5xl font-display font-black 
+                      border-b-4 border-gray-200 focus:border-accent focus:outline-none 
+                      bg-transparent placeholder-gray-200 transition-colors text-center"
+                  />
+                </div>
+                <button
+                  onClick={() => adjustReps(1)}
+                  className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
+                    border-2 border-black bg-gray-100 
+                    hover:bg-black hover:text-white active:bg-gray-800
+                    transition-colors touch-manipulation"
+                >
+                  <Plus className="w-5 h-5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Log Set Button - Full width, 56px+ height */}
             <button 
               onClick={handleLogSet}
-              className="w-full bg-black text-white py-6 font-mono text-xl font-bold uppercase tracking-widest hover:bg-accent hover:text-black transition-all active:scale-[0.98]"
+              disabled={logSet.isPending}
+              className="w-full min-h-[56px] bg-black text-white py-4 
+                font-mono text-lg font-bold uppercase tracking-widest 
+                hover:bg-accent hover:text-black transition-all 
+                active:scale-[0.98] touch-manipulation
+                disabled:opacity-50 disabled:cursor-not-allowed
+                flex items-center justify-center gap-2"
             >
-              Log Set <Check className="inline ml-2 mb-1" />
+              {logSet.isPending ? (
+                <>
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                  Logging...
+                </>
+              ) : (
+                <>
+                  Log Set <Check className="w-5 h-5" />
+                </>
+              )}
             </button>
           </div>
 
@@ -190,40 +480,63 @@ export default function ActiveSession() {
 
         {/* Rest Timer Overlay */}
         {isResting && (
-          <div className="absolute inset-0 z-50 bg-black/95 text-white flex flex-col items-center justify-center p-8 backdrop-blur-sm">
+          <div className="absolute inset-0 z-50 bg-black/95 text-white flex flex-col items-center justify-center p-8 backdrop-blur-sm safe-area-inset-bottom">
             <div className="w-full max-w-md text-center space-y-8">
               <div className="text-sm font-bold text-accent uppercase tracking-[0.3em] animate-pulse">
                 System Cooling Down
               </div>
               
-              <div className="font-display text-8xl md:text-[12rem] leading-none font-black tabular-nums">
+              {/* Giant Timer Display */}
+              <div className="font-display text-[80px] md:text-[120px] leading-none font-black tabular-nums font-mono">
                 {formatTime(restTimer)}
               </div>
 
+              {/* +/- Rest Buttons - Large touch targets */}
               <div className="flex justify-center gap-4">
-                <button onClick={() => addRest(30)} className="px-6 py-3 border border-white/20 hover:bg-white hover:text-black font-mono text-xs uppercase transition-colors">
+                <button 
+                  onClick={() => addRest(30)} 
+                  className="min-w-[80px] px-6 py-4 border-2 border-white/30 
+                    hover:bg-white hover:text-black font-mono text-sm uppercase 
+                    transition-colors touch-manipulation active:scale-95"
+                >
                   +30s
                 </button>
-                <button onClick={() => addRest(-30)} className="px-6 py-3 border border-white/20 hover:bg-white hover:text-black font-mono text-xs uppercase transition-colors">
+                <button 
+                  onClick={() => addRest(-30)} 
+                  className="min-w-[80px] px-6 py-4 border-2 border-white/30 
+                    hover:bg-white hover:text-black font-mono text-sm uppercase 
+                    transition-colors touch-manipulation active:scale-95"
+                >
                   -30s
                 </button>
               </div>
 
+              {/* Skip Button - Large touch target */}
               <button 
                 onClick={skipRest}
-                className="mt-12 w-full bg-accent text-black py-4 font-bold uppercase tracking-widest hover:bg-white transition-colors"
+                className="mt-8 w-full min-h-[56px] bg-accent text-black py-4 
+                  font-bold uppercase tracking-widest hover:bg-white 
+                  transition-colors touch-manipulation active:scale-[0.98]"
               >
-                Skip Rest <SkipForward className="inline ml-2 w-4 h-4" />
+                Skip Rest <SkipForward className="inline ml-2 w-5 h-5" />
               </button>
 
-              <div className="mt-8 text-gray-500 text-xs font-mono">
-                NEXT: {isLastSet && !isLastExercise ? workout[currentExerciseIdx + 1].name : "NEXT SET"}
+              {/* Next Preview */}
+              <div className="mt-6 text-gray-500 text-xs font-mono">
+                NEXT: {isLastSet && !isLastExercise ? exercises[currentExerciseIdx + 1].name : "NEXT SET"}
               </div>
             </div>
           </div>
         )}
 
       </main>
+      
+      {/* Exercise Notes Sheet */}
+      <ExerciseNotesSheet
+        exercise={exerciseData || null}
+        open={notesOpen}
+        onOpenChange={setNotesOpen}
+      />
     </div>
   );
 }

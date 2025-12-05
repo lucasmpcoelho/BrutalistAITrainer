@@ -1,0 +1,9 @@
+connectorId: "default"
+generate:
+  javascriptSdk:
+    outputDir: "../../dataconnect-generated/js"
+    package: "@iron-ai/dataconnect"
+    packageJsonDir: "../../"
+
+
+

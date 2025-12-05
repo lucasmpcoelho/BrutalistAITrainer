@@ -1,0 +1,14 @@
+specVersion: "v1beta"
+serviceId: "iron-ai-db"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "fdc-sql"
+connectorDirs: ["./connector"]
+
+
+

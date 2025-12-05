@@ -1,0 +1,24 @@
+extend type Session {
+  """
+  ✨ Implicit foreign key field based on `Session`.`workout`. It must match the value of `Workout`.`id`. See `@ref` for how to customize it.
+  """
+  workoutId: UUID @fdc_generated(from: "Session.workout", purpose: IMPLICIT_REF_FIELD)
+}
+extend type Set {
+  """
+  ✨ Implicit foreign key field based on `Set`.`session`. It must match the value of `Session`.`id`. See `@ref` for how to customize it.
+  """
+  sessionId: UUID! @fdc_generated(from: "Set.session", purpose: IMPLICIT_REF_FIELD)
+}
+extend type UserAchievement {
+  """
+  ✨ Implicit foreign key field based on `UserAchievement`.`achievement`. It must match the value of `Achievement`.`id`. See `@ref` for how to customize it.
+  """
+  achievementId: String! @fdc_generated(from: "UserAchievement.achievement", purpose: IMPLICIT_REF_FIELD)
+}
+extend type WorkoutExercise {
+  """
+  ✨ Implicit foreign key field based on `WorkoutExercise`.`workout`. It must match the value of `Workout`.`id`. See `@ref` for how to customize it.
+  """
+  workoutId: UUID! @fdc_generated(from: "WorkoutExercise.workout", purpose: IMPLICIT_REF_FIELD)
+}

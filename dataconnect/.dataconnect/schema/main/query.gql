@@ -1,0 +1,431 @@
+extend type Query {
+  """
+  ✨ Look up a single `Achievement` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  achievement(
+    """
+    The unique ID of the object.
+    """
+    id: String
+
+    """
+    ✨ `_expr` server value variant of `id` (The unique ID of the object.)
+    """
+    id_expr: String_Expr
+
+    """
+    The key used to identify the object.
+    """
+    key: Achievement_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Achievement_FirstRow
+  ): Achievement @fdc_generated(from: "Achievement", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `PersonalRecord` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  personalRecord(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: PersonalRecord_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: PersonalRecord_FirstRow
+  ): PersonalRecord @fdc_generated(from: "PersonalRecord", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Session` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  session(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Session_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Session_FirstRow
+  ): Session @fdc_generated(from: "Session", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Set` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  set(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Set_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Set_FirstRow
+  ): Set @fdc_generated(from: "Set", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Streak` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  streak(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Streak_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Streak_FirstRow
+  ): Streak @fdc_generated(from: "Streak", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `UserAchievement` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  userAchievement(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: UserAchievement_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: UserAchievement_FirstRow
+  ): UserAchievement @fdc_generated(from: "UserAchievement", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `Workout` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  workout(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: Workout_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: Workout_FirstRow
+  ): Workout @fdc_generated(from: "Workout", purpose: QUERY_SINGLE)
+  """
+  ✨ Look up a single `WorkoutExercise` based on `id`, `key` or `first` and return selected fields (or `null` if not found).
+  """
+  workoutExercise(
+    """
+    The unique ID of the object.
+    """
+    id: UUID
+
+    """
+    The key used to identify the object.
+    """
+    key: WorkoutExercise_Key
+
+    """
+    Fetch the first row based on the filters and ordering.
+    """
+    first: WorkoutExercise_FirstRow
+  ): WorkoutExercise @fdc_generated(from: "WorkoutExercise", purpose: QUERY_SINGLE)
+  """
+  ✨ List `Achievement` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  achievements(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Achievement_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Achievement_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Achievement_Having
+  ): [Achievement!]! @fdc_generated(from: "Achievement", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `PersonalRecord` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  personalRecords(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: PersonalRecord_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [PersonalRecord_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: PersonalRecord_Having
+  ): [PersonalRecord!]! @fdc_generated(from: "PersonalRecord", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Session` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  sessions(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Session_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Session_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Session_Having
+  ): [Session!]! @fdc_generated(from: "Session", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Set` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  sets(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Set_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Set_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Set_Having
+  ): [Set!]! @fdc_generated(from: "Set", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Streak` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  streaks(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Streak_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Streak_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Streak_Having
+  ): [Streak!]! @fdc_generated(from: "Streak", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `UserAchievement` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  userAchievements(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: UserAchievement_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [UserAchievement_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: UserAchievement_Having
+  ): [UserAchievement!]! @fdc_generated(from: "UserAchievement", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `Workout` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  workouts(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: Workout_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [Workout_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: Workout_Having
+  ): [Workout!]! @fdc_generated(from: "Workout", purpose: QUERY_MULTIPLE)
+  """
+  ✨ List `WorkoutExercise` objects in the table and return selected fields, optionally filtered by `where` conditions
+  """
+  workoutExercises(
+    """
+    Filter condition to narrow down the query results.
+    """
+    where: WorkoutExercise_Filter
+
+    """
+    Order the query results by specific fields.
+    """
+    orderBy: [WorkoutExercise_Order!]
+
+    """
+    Number of rows to skip before starting to return the results.
+    """
+    offset: Int
+
+    """
+    Maximum number of rows to return (defaults to 100 rows).
+    """
+    limit: Int = 100
+
+    """
+    Set to true to return distinct results.
+    """
+    distinct: Boolean = false
+
+    """
+    Filter condition to apply to the groups of aggregate queries.
+    """
+    having: WorkoutExercise_Having
+  ): [WorkoutExercise!]! @fdc_generated(from: "WorkoutExercise", purpose: QUERY_MULTIPLE)
+}
