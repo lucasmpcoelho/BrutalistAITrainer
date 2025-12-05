@@ -40,7 +40,7 @@ WORKDIR /app
 COPY package.json ./
 RUN npm install --omit=dev --legacy-peer-deps
 
-# Copy built files from builder
+# Copy built files from builder stage (already compiled, no need to rebuild)
 COPY --from=builder /app/dist ./dist
 
 # Set production environment
@@ -49,6 +49,7 @@ ENV NODE_ENV=production
 # Expose port (Railway sets PORT automatically)
 EXPOSE 3000
 
-# Start the application
+# Run node directly - bypasses "prestart" script which would try to rebuild
+# The dist/ folder is already built in the builder stage above
 CMD ["node", "dist/index.js"]
 
