@@ -46,18 +46,52 @@ If not detected, manually set:
 
 ---
 
-## Environment Variables (If Needed)
+## Environment Variables (REQUIRED)
 
-If you need environment variables (like `DATABASE_URL`):
+This app uses Firebase for authentication and data storage. You **MUST** configure these variables in Railway for the app to work.
 
 1. Go to your service → "Variables"
-2. Add any variables you need
+2. Add ALL variables listed below
 3. Railway will automatically restart your app
 
-**Common variables you might need**:
-- `NODE_ENV=production` (usually set automatically)
-- `PORT` (Railway sets this automatically)
-- `DATABASE_URL` (if you add a PostgreSQL database)
+### Server-Side Variables (Firebase Admin SDK)
+
+These credentials come from your Firebase Console → Project Settings → Service Accounts → Generate new private key:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `FIREBASE_PROJECT_ID` | Your Firebase project ID | `iron-ai-trainer` |
+| `FIREBASE_CLIENT_EMAIL` | Service account email | `firebase-adminsdk-xxxxx@project.iam.gserviceaccount.com` |
+| `FIREBASE_PRIVATE_KEY` | Service account private key (include newlines as \n) | `-----BEGIN PRIVATE KEY-----\nMIIEv...` |
+| `FIREBASE_STORAGE_BUCKET` | Storage bucket name | `iron-ai-trainer.appspot.com` |
+| `USE_DATA_CONNECT` | Enable Firebase Data Connect | `true` |
+
+### Client-Side Variables (Firebase Web SDK)
+
+These credentials come from Firebase Console → Project Settings → General → Your apps → Web app:
+
+| Variable | Description | Example |
+|----------|-------------|---------|
+| `VITE_FIREBASE_API_KEY` | Web API key | `AIzaSy...` |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Auth domain | `iron-ai-trainer.firebaseapp.com` |
+| `VITE_FIREBASE_PROJECT_ID` | Project ID (same as server) | `iron-ai-trainer` |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Storage bucket (same as server) | `iron-ai-trainer.appspot.com` |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Messaging sender ID | `123456789012` |
+| `VITE_FIREBASE_APP_ID` | App ID | `1:123456789012:web:abc123...` |
+
+### Auto-Set by Railway (No action needed)
+- `NODE_ENV=production`
+- `PORT` (automatically assigned)
+
+### Important Notes
+
+1. **FIREBASE_PRIVATE_KEY**: When pasting the private key, ensure newlines are preserved as `\n` characters. The key should start with `-----BEGIN PRIVATE KEY-----` and end with `-----END PRIVATE KEY-----`.
+
+2. **Data Connect**: The app uses Firebase Data Connect with Cloud SQL PostgreSQL. Make sure Data Connect is deployed in your Firebase project (it should already be if you've been developing locally with the emulator).
+
+3. **Firestore**: The exercise database (868 exercises) is stored in Firestore. No additional setup needed if you've already run the import script locally.
+
+4. **Google Sign-In**: For Google authentication to work, add your Railway domain to Firebase Console → Authentication → Settings → Authorized domains
 
 ---
 
@@ -165,7 +199,35 @@ Your app is already set up perfectly for Railway:
 - ✅ Uses `PORT` environment variable
 - ✅ Has `build` and `start` scripts
 - ✅ Serves both frontend and backend together
-- ✅ No special configuration needed
+- ✅ Firebase Data Connect deployed to Cloud SQL
+- ✅ Exercise database synced (868 exercises in Firestore)
 
-Just connect Railway to your GitHub repo and deploy! 🚀
+Just:
+1. Connect Railway to your GitHub repo
+2. Add all Firebase environment variables (see above)
+3. Add Railway domain to Firebase authorized domains
+4. Deploy! 🚀
+
+---
+
+## Quick Environment Variables Checklist
+
+Copy-paste this list and fill in your values:
+
+```
+# Server-side (Firebase Admin)
+FIREBASE_PROJECT_ID=your-project-id
+FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project-id.iam.gserviceaccount.com
+FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n
+FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+USE_DATA_CONNECT=true
+
+# Client-side (Firebase Web)
+VITE_FIREBASE_API_KEY=AIzaSy...
+VITE_FIREBASE_AUTH_DOMAIN=your-project-id.firebaseapp.com
+VITE_FIREBASE_PROJECT_ID=your-project-id
+VITE_FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
+VITE_FIREBASE_MESSAGING_SENDER_ID=123456789012
+VITE_FIREBASE_APP_ID=1:123456789012:web:abc123...
+```
 
