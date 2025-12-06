@@ -391,9 +391,52 @@ export class DataConnectStorage implements IStorage {
       false
     );
     
-    // Return updated exercise - need to fetch it
-    // For now, return undefined (caller should refetch)
-    return undefined;
+    // Fetch and return the updated exercise
+    return this.getWorkoutExercise(id);
+  }
+  
+  /**
+   * Get a single workout exercise by ID
+   */
+  async getWorkoutExercise(id: string): Promise<WorkoutExercise | undefined> {
+    interface ExerciseResult {
+      workoutExercise: {
+        id: string;
+        exerciseId: string;
+        exerciseName: string;
+        orderIndex: number;
+        targetSets: number;
+        targetReps: string;
+        targetRpe: number | null;
+        restSeconds: number | null;
+        notes: string | null;
+        createdAt: string;
+        workout: { id: string };
+      } | null;
+    }
+    
+    const result = await executeOperation<ExerciseResult>(
+      "GetWorkoutExercise",
+      { id },
+      true
+    );
+    
+    if (!result.workoutExercise) return undefined;
+    
+    const e = result.workoutExercise;
+    return {
+      id: e.id,
+      workoutId: e.workout.id,
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      orderIndex: e.orderIndex,
+      targetSets: e.targetSets,
+      targetReps: e.targetReps,
+      targetRpe: e.targetRpe,
+      restSeconds: e.restSeconds,
+      notes: e.notes,
+      createdAt: new Date(e.createdAt),
+    };
   }
 
   async removeWorkoutExercise(id: string): Promise<boolean> {

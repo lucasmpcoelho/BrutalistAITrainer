@@ -95,6 +95,25 @@ query GetWorkoutByDay($userId: String!, $dayOfWeek: Int!) @auth(level: PUBLIC) {
 # WORKOUT EXERCISE QUERIES
 # ============================================================================
 
+# Get a single workout exercise by ID
+query GetWorkoutExercise($id: UUID!) @auth(level: PUBLIC) {
+  workoutExercise(id: $id) {
+    id
+    exerciseId
+    exerciseName
+    orderIndex
+    targetSets
+    targetReps
+    targetRpe
+    restSeconds
+    notes
+    createdAt
+    workout {
+      id
+    }
+  }
+}
+
 # Get exercises for a workout
 query GetWorkoutExercises($workoutId: UUID!) @auth(level: PUBLIC) {
   workoutExercises(
