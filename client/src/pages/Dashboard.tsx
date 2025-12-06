@@ -25,7 +25,7 @@ import ScheduleEditor from "@/components/ScheduleEditor";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWorkouts, useUpdateWorkoutExercise, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
+import { useWorkouts, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
 import { useSessions } from "@/hooks/use-sessions";
 
 // Day names for display
@@ -84,9 +84,6 @@ export default function Dashboard() {
   
   // Fetch recent sessions to check completion status (with userId for cache isolation)
   const { data: sessions } = useSessions(userId, 10);
-  
-  // Mutation hook for updating workout exercises (for swap persistence)
-  const updateWorkoutExercise = useUpdateWorkoutExercise(userId);
 
   // Local state for exercises (allows swapping/skipping)
   const [localExercises, setLocalExercises] = useState<LocalExercise[] | null>(null);
@@ -236,10 +233,9 @@ export default function Dashboard() {
     setTimeout(() => setSwapOpen(true), 200);
   };
 
-  const handleSwap = async (newExercise: Exercise) => {
-    if (!selectedExercise || !selectedWorkout) return;
+  const handleSwap = (newExercise: Exercise) => {
+    if (!selectedExercise) return;
     
-    // Update local state immediately for responsive UI
     const newExercises = exercises.map(ex => 
       ex.id === selectedExercise.id
         ? {
@@ -251,24 +247,6 @@ export default function Dashboard() {
     );
     setLocalExercises(newExercises);
     vibrate("success");
-    
-    // Persist the swap to the backend
-    try {
-      await updateWorkoutExercise.mutateAsync({
-        workoutId: selectedWorkout.id,
-        exerciseId: selectedExercise.id, // This is the workout_exercise ID
-        data: {
-          exerciseId: newExercise.id,     // New exercise reference
-          exerciseName: newExercise.name,  // New exercise name
-        },
-      });
-      console.log("[Dashboard] Exercise swap persisted to backend");
-    } catch (error) {
-      console.error("[Dashboard] Failed to persist swap:", error);
-      // Revert local state on error
-      setLocalExercises(null);
-      vibrate("error");
-    }
   };
 
   // Get current exercise data from API

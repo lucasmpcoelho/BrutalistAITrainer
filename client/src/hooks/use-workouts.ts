@@ -64,17 +64,6 @@ export interface AddExerciseData {
   notes?: string;
 }
 
-export interface UpdateExerciseData {
-  exerciseId?: string;
-  exerciseName?: string;
-  orderIndex?: number;
-  targetSets?: number;
-  targetReps?: string;
-  targetRpe?: number;
-  restSeconds?: number;
-  notes?: string;
-}
-
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
@@ -196,28 +185,6 @@ async function deleteAllWorkouts(): Promise<{ message: string; deletedCount: num
   return response.json();
 }
 
-async function updateWorkoutExercise(
-  workoutId: string,
-  exerciseId: string,
-  data: UpdateExerciseData
-): Promise<WorkoutExercise> {
-  const headers = await getAuthHeaders();
-  const response = await fetch(`/api/workouts/${workoutId}/exercises/${exerciseId}`, {
-    method: "PUT",
-    headers,
-    credentials: "include",
-    body: JSON.stringify(data),
-  });
-  
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.error || "Failed to update exercise");
-  }
-  
-  const result = await response.json();
-  return result.exercise;
-}
-
 // ============================================================================
 // HOOKS
 // ============================================================================
@@ -312,32 +279,6 @@ export function useAddExerciseToWorkout(userId: string | null) {
   return useMutation({
     mutationFn: ({ workoutId, data }: { workoutId: string; data: AddExerciseData }) =>
       addExerciseToWorkout(workoutId, data),
-    onSuccess: (_, { workoutId }) => {
-      if (userId) {
-        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
-        queryClient.invalidateQueries({ queryKey: ["workout", userId, workoutId] });
-      }
-    },
-  });
-}
-
-/**
- * Update an exercise in a workout (e.g., swap exercise)
- * @param userId - Firebase user ID (for cache invalidation)
- */
-export function useUpdateWorkoutExercise(userId: string | null) {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ 
-      workoutId, 
-      exerciseId, 
-      data 
-    }: { 
-      workoutId: string; 
-      exerciseId: string; 
-      data: UpdateExerciseData 
-    }) => updateWorkoutExercise(workoutId, exerciseId, data),
     onSuccess: (_, { workoutId }) => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
