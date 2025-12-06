@@ -45,6 +45,7 @@ export const usersRelations = relations(users, ({ many }) => ({
   personalRecords: many(personalRecords),
   userAchievements: many(userAchievements),
   streaks: many(streaks),
+  conversations: many(conversations),
 }));
 
 // ============================================================================
@@ -249,6 +250,51 @@ export const streaksRelations = relations(streaks, ({ one }) => ({
 }));
 
 // ============================================================================
+// CONVERSATIONS TABLE (AI Coach chat sessions)
+// ============================================================================
+
+export const conversations = pgTable("conversations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  title: text("title"), // Auto-generated from first message or null
+  status: text("status").notNull().default("active"), // "active" | "archived"
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const conversationsRelations = relations(conversations, ({ one, many }) => ({
+  user: one(users, {
+    fields: [conversations.userId],
+    references: [users.id],
+  }),
+  messages: many(messages),
+}));
+
+// ============================================================================
+// MESSAGES TABLE (Individual chat messages within conversations)
+// ============================================================================
+
+export const messages = pgTable("messages", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  conversationId: varchar("conversation_id").notNull().references(() => conversations.id, { onDelete: "cascade" }),
+  role: text("role").notNull(), // "user" | "assistant" | "system"
+  content: text("content").notNull(),
+  toolCalls: jsonb("tool_calls").$type<{
+    name: string;
+    arguments: Record<string, unknown>;
+    result?: unknown;
+  }[]>(), // For Gemini function calling results
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const messagesRelations = relations(messages, ({ one }) => ({
+  conversation: one(conversations, {
+    fields: [messages.conversationId],
+    references: [conversations.id],
+  }),
+}));
+
+// ============================================================================
 // ZOD SCHEMAS & TYPES
 // ============================================================================
 
@@ -325,3 +371,20 @@ export type UserAchievement = typeof userAchievements.$inferSelect;
 
 // Streak schemas
 export type Streak = typeof streaks.$inferSelect;
+
+// Conversation schemas
+export const insertConversationSchema = createInsertSchema(conversations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMessageSchema = createInsertSchema(messages).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertConversation = z.infer<typeof insertConversationSchema>;
+export type InsertMessage = z.infer<typeof insertMessageSchema>;
+export type Conversation = typeof conversations.$inferSelect;
+export type Message = typeof messages.$inferSelect;

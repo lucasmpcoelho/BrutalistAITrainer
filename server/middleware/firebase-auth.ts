@@ -18,6 +18,13 @@ declare global {
         name?: string;
         picture?: string;
       };
+      // Alias for convenience - some routes use req.user
+      user?: {
+        uid: string;
+        email?: string;
+        name?: string;
+        picture?: string;
+      };
     }
   }
 }
@@ -59,6 +66,8 @@ export async function verifyFirebaseToken(
       name: decodedToken.name,
       picture: decodedToken.picture,
     };
+    // Also set req.user as an alias for convenience
+    req.user = req.firebaseUser;
     
     next();
   } catch (error) {
@@ -104,6 +113,7 @@ export async function optionalFirebaseAuth(
       name: decodedToken.name,
       picture: decodedToken.picture,
     };
+    req.user = req.firebaseUser;
   } catch (error) {
     // Invalid token, continue without user
     console.warn("[firebase-auth] Invalid token, continuing without auth");

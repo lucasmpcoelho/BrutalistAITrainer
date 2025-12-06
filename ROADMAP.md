@@ -1,8 +1,8 @@
 # IRON_AI — Product Roadmap
 
 > **Last Updated:** 2025-12-06  
-> **Current Phase:** Phase 2 — Backend & Persistence (Complete), Phase 2.9 — UX Bug Fixes (In Progress)  
-> **Status:** Firebase Data Connect deployed to Cloud SQL. Workout generation working with persistent storage. Training plan management features added (reset plan, edit schedule). Schedule editor redesigned with dropdown UX. **Onboarding race condition FIXED** — completion screen now shows 3-second animated delay before navigation. Swap/Notes sheet UI glitch fixed.
+> **Current Phase:** Phase 2.6 — AI Personal Trainer (Core Complete)  
+> **Status:** Firebase Data Connect deployed to Cloud SQL. Workout generation working with persistent storage. **AI Coach implemented** — Google Gemini integration with function calling for exercise swaps, volume adjustments, and form explanations. Brutalist coach persona with context-aware responses. Coach page connected to real AI backend.
 
 ---
 
@@ -427,40 +427,48 @@ exercises/{exerciseId}
 
 ## Phase 2.6: AI Personal Trainer
 
-*Goal: Intelligent coaching powered by OpenAI GPT-5.1*
+*Goal: Intelligent coaching powered by Google Gemini API*
+*Reference: https://ai.google.dev/gemini-api/docs*
 
 ### 2.6.1 Core Infrastructure
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P2.6-01 | [ ] | Set up Gemini API integration with provider abstraction layer | `server/services/ai-provider.ts` (new) |
-| P2.6-02 | [ ] | Create AI tool definitions (workout generation, plan adjustment, progress analysis) | `server/services/ai-tools.ts` (new) |
-| P2.6-03 | [ ] | Implement conversation history storage schema | `shared/schema.ts` |
-| P2.6-04 | [ ] | Build AI context builder (aggregates user data for prompts) | `server/services/ai-context.ts` (new) |
+| P2.6-01 | [x] | Set up Gemini API integration with provider abstraction layer | `server/services/ai-provider.ts` |
+| P2.6-02 | [x] | Create AI tool definitions (swap_exercise, adjust_volume, explain_exercise, get_alternatives) | `server/services/ai-tools.ts` |
+| P2.6-03 | [x] | Implement conversation history storage schema | `shared/schema.ts` (conversations, messages tables) |
+| P2.6-04 | [x] | Build AI context builder (aggregates user data for prompts) | `server/services/ai-context.ts` |
+| P2.6-05 | [x] | Create brutalist coach persona and system prompts | `server/services/ai-prompts.ts` |
 
 ### 2.6.2 Chat Interface
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P2.6-05 | [ ] | Design chat UI component (brutalist terminal aesthetic) | `client/src/components/ai/AIChat.tsx` (new) |
-| P2.6-06 | [ ] | Implement streaming responses with typing indicator | `client/src/components/ai/AIChat.tsx` |
-| P2.6-07 | [ ] | Add chat history view with session grouping | `client/src/components/ai/ChatHistory.tsx` (new) |
-| P2.6-08 | [ ] | Create quick-action suggestion chips | `client/src/components/ai/QuickActions.tsx` (new) |
+| P2.6-06 | [x] | Design chat UI integrated into existing Coach page | `client/src/pages/Coach.tsx` |
+| P2.6-07 | [x] | Implement typing indicator and loading states | `client/src/pages/Coach.tsx` |
+| P2.6-08 | [x] | Connect frontend to backend API with useSendMessage hook | `client/src/hooks/use-coach.ts` |
+| P2.6-09 | [x] | Create quick-action buttons that trigger AI prompts | `client/src/pages/Coach.tsx` |
 
-### 2.6.3 Proactive Coaching
+### 2.6.3 API Routes
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P2.6-09 | [ ] | Post-workout summary with AI insights | `client/src/components/ai/WorkoutSummary.tsx` (new) |
-| P2.6-10 | [ ] | Rest timer motivational tips | `client/src/pages/ActiveSession.tsx` |
-| P2.6-11 | [ ] | Weekly progress analysis notifications | `server/services/ai-notifications.ts` (new) |
-| P2.6-12 | [ ] | Workout plan adjustment suggestions | `client/src/components/ai/PlanSuggestion.tsx` (new) |
+| P2.6-10 | [x] | POST /api/coach/chat endpoint | `server/routes/coach.ts` |
+| P2.6-11 | [x] | GET /api/coach/insight endpoint for proactive insights | `server/routes/coach.ts` |
+| P2.6-12 | [x] | GET /api/coach/history endpoint | `server/routes/coach.ts` |
+| P2.6-13 | [x] | GET/DELETE /api/coach/conversation/:id endpoints | `server/routes/coach.ts` |
 
-### 2.6.4 AI Capabilities (Tool Calling)
+### 2.6.4 Proactive Coaching (Future)
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P2.6-13 | [ ] | Generate personalized workout plans based on goals/history | `server/services/ai-tools.ts` |
-| P2.6-14 | [ ] | Analyze progress and suggest deload/progression | `server/services/ai-tools.ts` |
-| P2.6-15 | [ ] | Provide nutrition guidance (protein, meal timing) | `server/services/ai-tools.ts` |
-| P2.6-16 | [ ] | Answer fitness questions with user context | `server/services/ai-tools.ts` |
-| P2.6-17 | [ ] | Motivational coaching with brutalist personality | `server/services/ai-prompts.ts` (new) |
+| P2.6-14 | [ ] | Post-workout summary with AI insights | `client/src/components/ai/WorkoutSummary.tsx` (new) |
+| P2.6-15 | [ ] | Rest timer motivational tips | `client/src/pages/ActiveSession.tsx` |
+| P2.6-16 | [ ] | Weekly progress analysis notifications | `server/services/ai-notifications.ts` (new) |
+| P2.6-17 | [ ] | Workout plan adjustment suggestions | `client/src/components/ai/PlanSuggestion.tsx` (new) |
+
+### 2.6.5 Additional AI Capabilities (Future)
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.6-18 | [ ] | Generate personalized workout plans based on goals/history | `server/services/ai-tools.ts` |
+| P2.6-19 | [ ] | Analyze progress and suggest deload/progression | `server/services/ai-tools.ts` |
+| P2.6-20 | [ ] | Provide nutrition guidance (protein, meal timing) | `server/services/ai-tools.ts` |
 
 ---
 
@@ -731,3 +739,4 @@ exercises/{exerciseId}
 | 2025-12-06 | P2.9-11 completed | **UI Glitches**: Fixed issue with double close buttons on SwapExerciseSheet and ExerciseNotesSheet by removing manual buttons and relying on shadcn Sheet default. |
 | 2025-12-06 | P2.9-12 completed | **Notes Sheet Close Button**: Replaced hidden/covered default close button with a custom floating button with high z-index and backdrop blur to ensure visibility over exercise images. |
 | 2025-12-06 | P2.9-13 completed | **Swap Persistence**: Fixed bug where swapped exercises would revert on refresh. Implemented dedicated `SwapWorkoutExercise` mutation in Data Connect and updated storage adapter to handle exercise identity updates separately from stats updates. |
+| 2025-12-06 | P2.6-01 to P2.6-13 completed | **AI Coach Implementation**: Integrated Google Gemini API with function calling. Created: `ai-provider.ts` (Gemini SDK wrapper), `ai-prompts.ts` (brutalist coach persona), `ai-context.ts` (user data aggregation), `ai-tools.ts` (swap_exercise, adjust_volume, explain_exercise, get_alternatives tools). Added conversation schema to `shared/schema.ts`. Created `server/routes/coach.ts` with chat, insight, and history endpoints. Updated `Coach.tsx` with real API integration via `use-coach.ts` hook. Installed `@google/generative-ai` package. |

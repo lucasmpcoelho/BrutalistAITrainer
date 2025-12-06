@@ -6,6 +6,7 @@ import authRoutes from "./routes/auth";
 import userRoutes from "./routes/user";
 import workoutRoutes from "./routes/workouts";
 import sessionRoutes from "./routes/sessions";
+import coachRoutes from "./routes/coach";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint - responds immediately for Railway/load balancers
@@ -19,6 +20,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.use("/api/workouts", workoutRoutes);
   app.use("/api/sessions", sessionRoutes);
   app.use("/api/exercises", exerciseRoutes);
+  app.use("/api/coach", coachRoutes);
 
   // use storage to perform CRUD operations on the storage interface
   // e.g. storage.insertUser(user) or storage.getUserByUsername(username)

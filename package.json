@@ -14,6 +14,7 @@
   },
   "notes": "removed framer motion dependency",
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@hookform/resolvers": "^3.10.0",
     "@iron-ai/dataconnect": "file:dataconnect-generated/js",
     "@jridgewell/trace-mapping": "^0.3.25",

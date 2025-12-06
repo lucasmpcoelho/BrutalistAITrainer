@@ -6,13 +6,15 @@ import {
   HelpCircle, 
   RefreshCw, 
   TrendingUp,
-  Dumbbell,
   MessageSquare,
   ChevronLeft,
-  Sparkles
+  Sparkles,
+  Loader2,
+  AlertCircle
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useSendMessage, useProactiveInsight, type ChatMessage, type ToolCall } from "@/hooks/use-coach";
 
 // Quick action definitions
 const QUICK_ACTIONS = [
@@ -24,17 +26,23 @@ const QUICK_ACTIONS = [
   { id: "why", label: "Why This?", icon: Sparkles, description: "Understand today's protocol" },
 ];
 
-// Mock proactive insight
-const PROACTIVE_INSIGHT = {
-  message: "Your HRV is down 12% from baseline. I recommend reducing volume today by 1-2 sets per exercise. Want me to adjust your protocol?",
-  actions: ["Yes, Adjust", "No, I Got This"],
+// Map quick actions to prompts
+const QUICK_ACTION_PROMPTS: Record<string, string> = {
+  adjust: "I want to adjust today's workout. What are my options?",
+  explain: "Explain my current training plan and why it's structured this way.",
+  swap: "I need to swap an exercise in today's workout. What alternatives do you recommend?",
+  progress: "Show me my progress and how I'm doing with my training.",
+  question: "I have a question about my training.",
+  why: "Why is this specific workout programmed for today? Explain the reasoning.",
 };
 
-type Message = {
+type LocalMessage = {
   id: number;
   text: string;
   sender: "ai" | "user";
   timestamp: Date;
+  toolCalls?: ToolCall[];
+  isError?: boolean;
 };
 
 // Typing indicator component
@@ -54,121 +62,99 @@ function TypingIndicator() {
 
 export default function Coach() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<LocalMessage[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [conversationId, setConversationId] = useState<string | undefined>();
   const [insightDismissed, setInsightDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { vibrate } = useHaptics();
 
+  // API hooks
+  const sendMessage = useSendMessage();
+  const { data: insightData, isLoading: insightLoading, error: insightError } = useProactiveInsight();
+
   // Scroll to bottom when messages change
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, sendMessage.isPending]);
+
+  const handleSendMessage = async (text: string) => {
+    if (!text.trim()) return;
+
+    vibrate("light");
+
+    // Add user message immediately
+    const userMessage: LocalMessage = {
+      id: Date.now(),
+      text,
+      sender: "user",
+      timestamp: new Date(),
+    };
+    setMessages((prev) => [...prev, userMessage]);
+    setInputValue("");
+
+    try {
+      const response = await sendMessage.mutateAsync({
+        message: text,
+        conversationId,
+      });
+
+      // Update conversation ID if we got one
+      if (response.conversationId) {
+        setConversationId(response.conversationId);
+      }
+
+      // Add AI response
+      const aiMessage: LocalMessage = {
+        id: Date.now() + 1,
+        text: response.message,
+        sender: "ai",
+        timestamp: new Date(),
+        toolCalls: response.toolCalls,
+      };
+      setMessages((prev) => [...prev, aiMessage]);
+    } catch (error) {
+      // Add error message
+      const errorMessage: LocalMessage = {
+        id: Date.now() + 1,
+        text: error instanceof Error 
+          ? error.message 
+          : "Failed to get a response. Please try again.",
+        sender: "ai",
+        timestamp: new Date(),
+        isError: true,
+      };
+      setMessages((prev) => [...prev, errorMessage]);
+    }
+  };
 
   const handleQuickAction = (actionId: string) => {
     vibrate("light");
-    
-    // Map action to a user message
-    const actionMessages: Record<string, string> = {
-      adjust: "I want to adjust today's workout",
-      explain: "Explain my current training plan",
-      swap: "I need to swap an exercise",
-      progress: "Show me my progress",
-      question: "I have a question",
-      why: "Why is this workout programmed for today?",
-    };
-
-    const userMessage = actionMessages[actionId] || "Help me";
-    
-    // Add user message and expand to chat
-    setMessages(prev => [...prev, {
-      id: Date.now(),
-      text: userMessage,
-      sender: "user",
-      timestamp: new Date(),
-    }]);
-    
+    const prompt = QUICK_ACTION_PROMPTS[actionId] || "Help me with my training.";
     setIsExpanded(true);
     
-    // Simulate AI response
-    setIsTyping(true);
+    // Small delay to ensure UI expands before sending
     setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: getAIResponse(actionId),
-        sender: "ai",
-        timestamp: new Date(),
-      }]);
-    }, 1000);
+      handleSendMessage(prompt);
+    }, 100);
   };
 
-  const getAIResponse = (actionId: string): string => {
-    const responses: Record<string, string> = {
-      adjust: "I can adjust your workout. What would you like to change? You can:\n\n• Reduce volume (fewer sets)\n• Lower intensity (lighter weights)\n• Shorten the session\n• Skip specific exercises",
-      explain: "Your current program is a 4-day Upper/Lower split focused on hypertrophy. We're in Week 3 of a 6-week mesocycle, which means intensity is ramping up while volume stays moderate. This builds toward a deload in Week 7.",
-      swap: "Which exercise do you want to swap? Tell me the exercise name and I'll suggest alternatives that target the same muscle groups.",
-      progress: "Over the past 4 weeks:\n\n• Bench Press: +5kg (75kg → 80kg)\n• Squat: +7.5kg (100kg → 107.5kg)\n• Total Volume: +12%\n\nYou're progressing well. Keep pushing!",
-      question: "I'm here to help. What would you like to know about your training, nutrition, or recovery?",
-      why: "Today is LEGS DAY because:\n\n1. It's been 72 hours since your last lower body session (optimal recovery)\n2. Your HRV indicates good readiness\n3. This maintains your 2x/week leg frequency for growth",
-    };
-    return responses[actionId] || "I'm here to help. What would you like to know?";
-  };
-
-  const handleInsightAction = (action: string) => {
+  const handleInsightAction = async (action: string) => {
     vibrate("medium");
     setInsightDismissed(true);
     
-    if (action === "Yes, Adjust") {
-      setMessages([{
-        id: Date.now(),
-        text: "Yes, please adjust my workout for today",
-        sender: "user",
-        timestamp: new Date(),
-      }]);
+    if (action === "Yes, Adjust" && insightData?.insight) {
       setIsExpanded(true);
-      
-      setIsTyping(true);
       setTimeout(() => {
-        setIsTyping(false);
-        setMessages(prev => [...prev, {
-          id: Date.now() + 1,
-          text: "Done! I've reduced each exercise by 1 set and lowered the target RPE by 1. Your workout will still be effective but won't overtax your recovery. You'll thank me tomorrow. 💪",
-          sender: "ai",
-          timestamp: new Date(),
-        }]);
-      }, 1200);
+        handleSendMessage(`Based on your insight about my recovery, please adjust my workout for today.`);
+      }, 100);
     }
   };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inputValue.trim()) return;
-
-    vibrate("light");
-    
-    const userMessage: Message = {
-      id: Date.now(),
-      text: inputValue,
-      sender: "user",
-      timestamp: new Date(),
-    };
-    
-    setMessages(prev => [...prev, userMessage]);
-    setInputValue("");
-    
-    // Simulate AI response
-    setIsTyping(true);
-    setTimeout(() => {
-      setIsTyping(false);
-      setMessages(prev => [...prev, {
-        id: Date.now() + 1,
-        text: "That's a great question. Based on your training history and goals, I'd recommend focusing on progressive overload while maintaining proper form. Would you like me to elaborate on any specific aspect?",
-        sender: "ai",
-        timestamp: new Date(),
-      }]);
-    }, 1000);
+    if (!inputValue.trim() || sendMessage.isPending) return;
+    handleSendMessage(inputValue);
   };
 
   // Expanded chat view
@@ -176,29 +162,36 @@ export default function Coach() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         {/* Chat header */}
-        <header className="bg-black text-white p-4 flex items-center gap-4 sticky top-0 z-50 safe-area-top border-b-2 border-white">
+        <header className="bg-black text-white p-4 flex items-center gap-3 sticky top-0 z-50 border-b-2 border-white">
           <button 
             onClick={() => {
               vibrate("light");
               setIsExpanded(false);
             }}
-            className="w-10 h-10 flex items-center justify-center hover:bg-white/10 touch-manipulation"
+            className="w-10 h-10 flex items-center justify-center hover:bg-white/10 touch-manipulation -ml-2"
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-accent flex items-center justify-center">
-              <Bot className="w-5 h-5 text-black" />
-            </div>
-            <div>
-              <div className="font-display font-bold">IRON_AI COACH</div>
-              <div className="text-xs text-gray-400">Always online</div>
+          <div className="w-10 h-10 bg-accent flex items-center justify-center flex-shrink-0">
+            <Bot className="w-5 h-5 text-black" />
+          </div>
+          <div className="min-w-0">
+            <div className="font-display font-bold text-xl tracking-tighter">IRON_AI COACH</div>
+            <div className="text-xs text-gray-400">
+              {sendMessage.isPending ? "Thinking..." : "Always online"}
             </div>
           </div>
         </header>
 
         {/* Chat messages */}
-        <div className="flex-1 overflow-y-auto p-4 pb-24 space-y-4">
+        <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-[calc(5rem+env(safe-area-inset-bottom)+4rem)]">
+          {messages.length === 0 && (
+            <div className="text-center text-gray-500 py-8">
+              <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <p className="text-sm">Start a conversation with your AI coach</p>
+            </div>
+          )}
+          
           {messages.map((msg) => (
             <div 
               key={msg.id} 
@@ -206,10 +199,34 @@ export default function Coach() {
             >
               <div className={`max-w-[80%] p-4 border rounded-2xl ${
                 msg.sender === "ai" 
-                  ? "border-gray-200 bg-gray-50 text-gray-800 rounded-tl-none" 
+                  ? msg.isError
+                    ? "border-red-200 bg-red-50 text-red-800 rounded-tl-none"
+                    : "border-gray-200 bg-gray-50 text-gray-800 rounded-tl-none" 
                   : "border-black bg-black text-white rounded-tr-none"
               }`}>
+                {msg.isError && (
+                  <div className="flex items-center gap-2 mb-2 text-red-600">
+                    <AlertCircle className="w-4 h-4" />
+                    <span className="text-xs font-bold uppercase">Error</span>
+                  </div>
+                )}
                 <p className="whitespace-pre-line text-sm leading-relaxed">{msg.text}</p>
+                
+                {/* Show tool calls if any */}
+                {msg.toolCalls && msg.toolCalls.length > 0 && (
+                  <div className="mt-3 pt-3 border-t border-gray-200">
+                    <div className="text-[10px] font-bold uppercase text-gray-500 mb-2">
+                      Actions Taken
+                    </div>
+                    {msg.toolCalls.map((tc, i) => (
+                      <div key={i} className="text-xs text-gray-600 flex items-center gap-1">
+                        <span className="text-green-600">✓</span>
+                        {tc.result?.message || tc.name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                
                 <span className={`text-[10px] opacity-50 mt-2 block ${msg.sender === "user" ? "text-gray-400" : "text-gray-500"}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
@@ -217,30 +234,39 @@ export default function Coach() {
             </div>
           ))}
           
-          {isTyping && <TypingIndicator />}
+          {sendMessage.isPending && <TypingIndicator />}
           
           <div ref={messagesEndRef} />
         </div>
 
         {/* Chat input */}
-        <div className="fixed bottom-16 inset-x-0 bg-white border-t border-gray-200 p-4 safe-area-bottom">
+        <div 
+          className="fixed inset-x-0 bg-white border-t border-gray-200 p-4"
+          style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+        >
           <form onSubmit={handleSubmit} className="flex gap-2">
             <input
               type="text"
               value={inputValue}
               onChange={(e) => setInputValue(e.target.value)}
               placeholder="Ask your coach..."
+              disabled={sendMessage.isPending}
               className="flex-1 px-4 py-3 border border-gray-200 rounded-xl font-mono text-sm 
-                focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-gray-50"
+                focus:outline-none focus:border-black focus:ring-1 focus:ring-black bg-gray-50
+                disabled:opacity-50 disabled:cursor-not-allowed"
             />
             <button
               type="submit"
-              disabled={!inputValue.trim()}
+              disabled={!inputValue.trim() || sendMessage.isPending}
               className="w-12 h-12 bg-black text-white rounded-xl flex items-center justify-center 
                 disabled:opacity-50 disabled:cursor-not-allowed
                 hover:bg-gray-800 transition-colors touch-manipulation shadow-sm"
             >
-              <Send className="w-5 h-5" />
+              {sendMessage.isPending ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <Send className="w-5 h-5" />
+              )}
             </button>
           </form>
         </div>
@@ -250,7 +276,7 @@ export default function Coach() {
 
   // Hub view (default)
   return (
-    <div className="min-h-screen bg-background flex flex-col pb-20">
+    <div className="min-h-screen bg-background flex flex-col pb-40">
       <AppHeader title="COACH" />
 
       <main className="flex-1 p-4 space-y-6">
@@ -260,34 +286,53 @@ export default function Coach() {
           <div className="border border-gray-200 bg-white p-5 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="flex items-start gap-3 mb-4">
               <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
-                <Bot className="w-6 h-6 text-black" />
+                {insightLoading ? (
+                  <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
+                ) : (
+                  <Bot className="w-6 h-6 text-black" />
+                )}
               </div>
-              <div>
+              <div className="flex-1">
                 <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
                   IRON_AI INSIGHT
                 </div>
-                <p className="text-sm leading-relaxed text-gray-700">
-                  {PROACTIVE_INSIGHT.message}
-                </p>
+                {insightLoading ? (
+                  <div className="animate-pulse">
+                    <div className="h-4 bg-gray-200 rounded w-3/4 mb-2"></div>
+                    <div className="h-4 bg-gray-200 rounded w-1/2"></div>
+                  </div>
+                ) : insightError ? (
+                  <p className="text-sm text-gray-500 italic">
+                    Unable to generate insight at this time. Start a conversation to get personalized coaching.
+                  </p>
+                ) : (
+                  <p className="text-sm leading-relaxed text-gray-700">
+                    {insightData?.insight || "Ready to help you train smarter. Tap a quick action or ask me anything."}
+                  </p>
+                )}
               </div>
             </div>
             
-            <div className="flex gap-2">
-              {PROACTIVE_INSIGHT.actions.map((action) => (
+            {!insightLoading && !insightError && insightData?.insight && (
+              <div className="flex gap-2">
                 <button
-                  key={action}
-                  onClick={() => handleInsightAction(action)}
-                  className={`flex-1 py-3 font-mono text-xs font-bold uppercase tracking-wider 
-                    border rounded-lg touch-manipulation transition-colors ${
-                    action.includes("Yes") 
-                      ? "bg-black text-white border-black hover:bg-gray-900" 
-                      : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50"
-                  }`}
+                  onClick={() => handleInsightAction("Yes, Adjust")}
+                  className="flex-1 py-3 font-mono text-xs font-bold uppercase tracking-wider 
+                    bg-black text-white border border-black rounded-lg touch-manipulation 
+                    transition-colors hover:bg-gray-900"
                 >
-                  {action}
+                  Apply Suggestion
                 </button>
-              ))}
-            </div>
+                <button
+                  onClick={() => setInsightDismissed(true)}
+                  className="flex-1 py-3 font-mono text-xs font-bold uppercase tracking-wider 
+                    bg-white text-gray-700 border border-gray-200 rounded-lg touch-manipulation 
+                    transition-colors hover:bg-gray-50"
+                >
+                  Dismiss
+                </button>
+              </div>
+            )}
           </div>
         )}
 
@@ -344,7 +389,10 @@ export default function Coach() {
       </main>
 
       {/* Persistent chat input (collapsed) */}
-      <div className="fixed bottom-16 inset-x-0 bg-white border-t border-gray-200 p-4">
+      <div 
+        className="fixed inset-x-0 bg-white border-t border-gray-200 p-4"
+        style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
+      >
         <button
           onClick={() => {
             vibrate("light");
@@ -360,10 +408,3 @@ export default function Coach() {
     </div>
   );
 }
-
-
-
-
-
-
-
