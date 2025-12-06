@@ -305,7 +305,7 @@ export default function ActiveSession() {
     <div className="min-h-screen bg-background text-foreground font-mono flex flex-col selection:bg-accent selection:text-black">
       
       {/* Top Bar */}
-      <header className="bg-black text-white p-4 flex justify-between items-center border-b-2 border-white sticky top-0 z-50">
+      <header className="bg-black text-white p-4 flex justify-between items-center border-b border-white/20 sticky top-0 z-50">
         <div className="flex items-center gap-4 h-10">
           <span className="w-3 h-3 bg-red-500 rounded-full animate-pulse shadow-[0_0_10px_red]"></span>
           <span className="font-bold tracking-widest text-xs md:text-sm">LIVE SESSION</span>
@@ -359,14 +359,14 @@ export default function ActiveSession() {
            </div>
 
           {/* Data Entry Card */}
-          <div className="border-2 border-black p-4 md:p-8 bg-white brutal-shadow-lg relative flex-1 flex flex-col justify-center">
+          <div className="border border-gray-200 rounded-xl p-4 md:p-8 bg-white shadow-md relative flex-1 flex flex-col justify-center">
             {/* Notes Button */}
             <div className="flex items-start justify-end mb-6">
               <button
                 onClick={handleNotesClick}
-                className="flex items-center gap-2 px-3 py-2 border-2 border-black 
-                  font-mono text-xs font-bold uppercase
-                  hover:bg-black hover:text-white transition-colors touch-manipulation"
+                className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-lg 
+                  font-mono text-xs font-bold uppercase text-gray-600
+                  hover:bg-gray-50 transition-colors touch-manipulation"
               >
                 <BookOpen className="w-4 h-4" />
                 Form Cues
@@ -382,9 +382,9 @@ export default function ActiveSession() {
                 <button
                   onClick={() => adjustWeight(-2.5)}
                   className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
-                    border-2 border-black bg-gray-100 
-                    hover:bg-black hover:text-white active:bg-gray-800
-                    transition-colors touch-manipulation"
+                    border border-gray-200 rounded-xl bg-gray-50 
+                    hover:bg-gray-100 active:bg-gray-200
+                    transition-colors touch-manipulation text-gray-600"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
@@ -397,16 +397,16 @@ export default function ActiveSession() {
                     placeholder="0"
                     autoFocus
                     className="w-full text-4xl md:text-5xl font-display font-black 
-                      border-b-4 border-gray-200 focus:border-accent focus:outline-none 
-                      bg-transparent placeholder-gray-200 transition-colors text-center"
+                      border-b-2 border-gray-100 focus:border-accent focus:outline-none 
+                      bg-transparent placeholder-gray-200 transition-colors text-center pb-2"
                   />
                 </div>
                 <button
                   onClick={() => adjustWeight(2.5)}
                   className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
-                    border-2 border-black bg-gray-100 
-                    hover:bg-black hover:text-white active:bg-gray-800
-                    transition-colors touch-manipulation"
+                    border border-gray-200 rounded-xl bg-gray-50 
+                    hover:bg-gray-100 active:bg-gray-200
+                    transition-colors touch-manipulation text-gray-600"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -422,9 +422,9 @@ export default function ActiveSession() {
                 <button
                   onClick={() => adjustReps(-1)}
                   className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
-                    border-2 border-black bg-gray-100 
-                    hover:bg-black hover:text-white active:bg-gray-800
-                    transition-colors touch-manipulation"
+                    border border-gray-200 rounded-xl bg-gray-50 
+                    hover:bg-gray-100 active:bg-gray-200
+                    transition-colors touch-manipulation text-gray-600"
                 >
                   <Minus className="w-5 h-5" />
                 </button>
@@ -436,16 +436,16 @@ export default function ActiveSession() {
                     onChange={(e) => setRepsInput(e.target.value)}
                     placeholder="0"
                     className="w-full text-4xl md:text-5xl font-display font-black 
-                      border-b-4 border-gray-200 focus:border-accent focus:outline-none 
-                      bg-transparent placeholder-gray-200 transition-colors text-center"
+                      border-b-2 border-gray-100 focus:border-accent focus:outline-none 
+                      bg-transparent placeholder-gray-200 transition-colors text-center pb-2"
                   />
                 </div>
                 <button
                   onClick={() => adjustReps(1)}
                   className="w-12 h-12 md:w-14 md:h-14 flex items-center justify-center 
-                    border-2 border-black bg-gray-100 
-                    hover:bg-black hover:text-white active:bg-gray-800
-                    transition-colors touch-manipulation"
+                    border border-gray-200 rounded-xl bg-gray-50 
+                    hover:bg-gray-100 active:bg-gray-200
+                    transition-colors touch-manipulation text-gray-600"
                 >
                   <Plus className="w-5 h-5" />
                 </button>
@@ -458,7 +458,7 @@ export default function ActiveSession() {
               disabled={logSet.isPending}
               className="w-full min-h-[56px] bg-black text-white py-4 
                 font-mono text-lg font-bold uppercase tracking-widest 
-                hover:bg-accent hover:text-black transition-all 
+                rounded-xl shadow-lg hover:bg-gray-900 transition-all 
                 active:scale-[0.98] touch-manipulation
                 disabled:opacity-50 disabled:cursor-not-allowed
                 flex items-center justify-center gap-2"
@@ -495,16 +495,16 @@ export default function ActiveSession() {
               <div className="flex justify-center gap-4">
                 <button 
                   onClick={() => addRest(30)} 
-                  className="min-w-[80px] px-6 py-4 border-2 border-white/30 
-                    hover:bg-white hover:text-black font-mono text-sm uppercase 
+                  className="min-w-[80px] px-6 py-4 border border-white/20 rounded-xl
+                    hover:bg-white/10 font-mono text-sm uppercase 
                     transition-colors touch-manipulation active:scale-95"
                 >
                   +30s
                 </button>
                 <button 
                   onClick={() => addRest(-30)} 
-                  className="min-w-[80px] px-6 py-4 border-2 border-white/30 
-                    hover:bg-white hover:text-black font-mono text-sm uppercase 
+                  className="min-w-[80px] px-6 py-4 border border-white/20 rounded-xl
+                    hover:bg-white/10 font-mono text-sm uppercase 
                     transition-colors touch-manipulation active:scale-95"
                 >
                   -30s
@@ -515,7 +515,7 @@ export default function ActiveSession() {
               <button 
                 onClick={skipRest}
                 className="mt-8 w-full min-h-[56px] bg-accent text-black py-4 
-                  font-bold uppercase tracking-widest hover:bg-white 
+                  font-bold uppercase tracking-widest rounded-xl hover:bg-white 
                   transition-colors touch-manipulation active:scale-[0.98]"
               >
                 Skip Rest <SkipForward className="inline ml-2 w-5 h-5" />

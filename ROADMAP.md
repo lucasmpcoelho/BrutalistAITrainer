@@ -90,11 +90,13 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [ ] Progress tracking and charts
 - [ ] Health app integrations
 - [ ] AI Personal Trainer (chat interface, proactive coaching, workout generation)
+- [ ] Active Session video redesign with AI-generated exercise demonstration videos
 
 ### Active Work
 - ✅ **Phase 2 Complete** — Firebase Data Connect deployed, workout generation working, training plan management features added.
 - 🔧 **Phase 2.9 In Progress** — ~~Race condition~~ FIXED! Remaining: swap exercise alternatives, exercise coverage for equipment-less users.
-- 🔜 **Next: Phase 3 (Gamification)** — Achievement system, PRs, streaks, progress visualization.
+- 🔜 **Next: Phase 2.10 (Active Session Video Redesign)** — AI-generated exercise videos, immersive session UI, enhanced notes.
+- 🔜 **Future: Phase 3 (Gamification)** — Achievement system, PRs, streaks, progress visualization.
 
 ---
 
@@ -546,6 +548,60 @@ exercises/{exerciseId}
 
 ---
 
+## Phase 2.10: Active Session Video Redesign
+
+*Goal: Redesign the Active Session screen with AI-generated exercise demonstration videos for immersive workout guidance*
+
+### 2.10.1 Exercise Video Infrastructure
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.10-01 | [ ] | Add `videoUrl` and `videoPath` fields to FirestoreExercise type | `shared/types/exercise.ts` |
+| P2.10-02 | [ ] | Update Exercise API response type to include videoUrl | `shared/types/exercise.ts` |
+| P2.10-03 | [ ] | Create Firebase Storage bucket structure for videos (`exercises/videos/{exerciseId}.mp4`) | Firebase Console |
+| P2.10-04 | [ ] | Create upload script for batch video upload to Firebase Storage | `server/scripts/upload-exercise-videos.ts` (new) |
+| P2.10-05 | [ ] | Create Firestore update script to set videoUrl for exercises with videos | `server/scripts/update-exercise-video-urls.ts` (new) |
+
+### 2.10.2 AI Video Generation (Manual/Batch)
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.10-06 | [ ] | Document AI video generation workflow (prompts, tools, specifications) | `docs/AI_VIDEO_GENERATION.md` (new) |
+| P2.10-07 | [ ] | Define video specifications: 4 seconds, looping, 720p portrait, MP4 | Documentation |
+| P2.10-08 | [ ] | Create priority list of exercises to generate videos for (start with top 50 most common) | Documentation |
+
+### 2.10.3 Video Player Component
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.10-09 | [ ] | Create ExerciseVideoPlayer component with looping autoplay and loading states | `client/src/components/ExerciseVideoPlayer.tsx` (new) |
+| P2.10-10 | [ ] | Add fallback to static image (existing gifUrl) when video unavailable | `client/src/components/ExerciseVideoPlayer.tsx` |
+| P2.10-11 | [ ] | Implement muted autoplay with loop for mobile compatibility | `client/src/components/ExerciseVideoPlayer.tsx` |
+
+### 2.10.4 Active Session UI Redesign
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.10-12 | [ ] | Redesign layout: large video area at top (~60% viewport), controls at bottom | `client/src/pages/ActiveSession.tsx` |
+| P2.10-13 | [ ] | Add "Next exercise" preview thumbnail in top-right corner | `client/src/pages/ActiveSession.tsx` |
+| P2.10-14 | [ ] | Move weight/reps input to bottom section with dark background | `client/src/pages/ActiveSession.tsx` |
+| P2.10-15 | [ ] | Add Prev/Next exercise navigation buttons at bottom | `client/src/pages/ActiveSession.tsx` |
+| P2.10-16 | [ ] | Add progress bar showing workout completion percentage | `client/src/pages/ActiveSession.tsx` |
+| P2.10-17 | [ ] | Style bottom control area with brutalist dark theme (black bg, accent buttons) | `client/src/pages/ActiveSession.tsx` |
+
+### 2.10.5 Enhanced Notes Sheet
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.10-18 | [ ] | Redesign ExerciseNotesSheet with detailed text cues organized by phase (setup, execution, finish) | `client/src/components/ExerciseNotesSheet.tsx` |
+| P2.10-19 | [ ] | Add floating Notes button visible during video playback | `client/src/pages/ActiveSession.tsx` |
+| P2.10-20 | [ ] | Include common mistakes and tips sections in notes | `client/src/components/ExerciseNotesSheet.tsx` |
+
+**Video Specifications:**
+- Format: MP4 with H.264 codec for maximum browser compatibility
+- Duration: 4 seconds, seamlessly looping
+- Resolution: 720p portrait orientation (optimized for mobile)
+- Storage: Firebase Storage under `exercises/videos/{exerciseId}.mp4`
+- Fallback: When videoUrl is null/missing, falls back to existing static image (gifUrl)
+- Autoplay: Videos autoplay muted and loop continuously (required for mobile autoplay)
+
+---
+
 ## Phase 3: Gamification System
 
 *Goal: Make progress feel rewarding*
@@ -667,4 +723,5 @@ exercises/{exerciseId}
 | 2025-12-04 | Phase 2.8 added, P2.8-01 to P2.8-09 completed | **Training Plan Management**: Added DELETE /api/workouts/all endpoint for reset. Added Reset Training Plan and Edit Schedule to AppHeader menu with confirmation dialog. Fixed SwapExercise route ordering bug (alternatives route now before :id). Fixed race condition on dashboard load after onboarding. Phase 2 complete! |
 | 2025-12-04 | Schedule Editor redesigned, Phase 2.9 added | **UX Improvements**: Redesigned ScheduleEditor with intuitive day-based dropdown selection (single-tap to change any day's workout, smart swap when selecting workout already on another day). Refactored SwapExerciseSheet to accept exerciseId and fetch data internally. Added refetchQueries to Onboarding after workout generation. **Issues identified**: Race condition still occurs, swap alternatives still not loading, exercise database may lack coverage for equipment-less users. Added Phase 2.9 for debugging these issues. |
 | 2025-12-05 | P2.9-01 to P2.9-03 completed | **Onboarding Race Condition FIXED**: Root cause was `refetchProfile()` updating auth context, triggering `OnboardingRoute` to redirect before 3-second delay. Fix: (1) Auto-start save/generate on completion screen mount, (2) Add 3-second minimum delay with animated terminal-style status messages, (3) Defer `refetchProfile()` to button click. Users now see celebratory completion screen with progress messages before dashboard. |
-| 2025-12-05 | UI Refinement | **Visual Polish**: Refined Dashboard, Coach, and Health screens (plus AppHeader dialogs, ScheduleEditor, and Sheets) to use soft gray borders (`border-gray-200`) and rounded corners (`rounded-xl`) instead of hard black outlines. Reduced shadow intensity to `shadow-sm` to reduce visual clutter and improve content readability. |
+| 2025-12-05 | UI Refinement | **Visual Polish**: Refined Dashboard, Coach, Health, and Active Session screens (plus related components) to use soft gray borders (`border-gray-200`) and rounded corners (`rounded-xl`) instead of hard black outlines. Reduced shadow intensity to `shadow-sm` to reduce visual clutter and improve content readability. |
+| 2025-12-05 | Phase 2.10 added | **Active Session Video Redesign**: Added new phase for AI-generated exercise demonstration videos (4s looping MP4s), video player component with image fallback, redesigned ActiveSession UI with video at top and controls at bottom, enhanced notes sheet with phase-organized cues. |

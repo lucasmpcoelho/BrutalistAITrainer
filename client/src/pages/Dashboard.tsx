@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { 
   ChevronRight, 
@@ -14,7 +14,8 @@ import {
   BookOpen,
   LogIn,
   Loader2,
-  Calendar
+  Calendar,
+  RotateCcw
 } from "lucide-react";
 import AppHeader from "@/components/AppHeader";
 import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
@@ -24,11 +25,12 @@ import ScheduleEditor from "@/components/ScheduleEditor";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWorkouts, useTodayWorkout, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
+import { useWorkouts, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
 import { useSessions } from "@/hooks/use-sessions";
 
 // Day names for display
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+const DAY_NAMES_FULL = ["SUNDAY", "MONDAY", "TUESDAY", "WEDNESDAY", "THURSDAY", "FRIDAY", "SATURDAY"];
 
 // Exercise type for local state
 interface LocalExercise {
@@ -72,9 +74,12 @@ export default function Dashboard() {
   const { vibrate } = useHaptics();
   const { isAuthenticated, userProfile, isLoading: isAuthLoading } = useAuth();
   
+  // Selected day of week for viewing workouts (0=Sunday, 1=Monday, etc.)
+  const todayDayOfWeek = new Date().getDay();
+  const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(todayDayOfWeek);
+  
   // Fetch workouts from API
   const { data: apiWorkouts, isLoading: isWorkoutsLoading } = useWorkouts();
-  const { workout: todayWorkout, isLoading: isTodayLoading, hasWorkout } = useTodayWorkout();
   
   // Fetch recent sessions to check completion status
   const { data: sessions } = useSessions(10);
@@ -91,6 +96,11 @@ export default function Dashboard() {
 
   // Get week dates
   const weekDates = useMemo(() => getWeekDates(), []);
+  
+  // Reset local exercises when day changes
+  useEffect(() => {
+    setLocalExercises(null);
+  }, [selectedDayOfWeek]);
 
   // Build week data from API workouts
   const weekData = useMemo(() => {
@@ -128,12 +138,27 @@ export default function Dashboard() {
     });
   }, [apiWorkouts, weekDates, sessions]);
 
-  // Initialize local exercises from today's workout
+  // Get selected day's workout from API workouts
+  const selectedWorkout = useMemo(() => {
+    if (!apiWorkouts) return null;
+    return apiWorkouts.find(w => w.dayOfWeek === selectedDayOfWeek && w.isActive) || null;
+  }, [apiWorkouts, selectedDayOfWeek]);
+
+  // Check if selected day is today
+  const isSelectedDayToday = selectedDayOfWeek === todayDayOfWeek;
+  
+  // Get selected day's data from weekData
+  const selectedDayData = weekData.find(d => d.dayOfWeek === selectedDayOfWeek);
+  
+  // Check if selected day has a workout
+  const hasWorkoutOnSelectedDay = !!selectedWorkout;
+
+  // Initialize local exercises from selected day's workout
   const exercises = useMemo(() => {
     if (localExercises !== null) return localExercises;
-    if (!todayWorkout?.exercises) return [];
+    if (!selectedWorkout?.exercises) return [];
     
-    return todayWorkout.exercises.map((ex): LocalExercise => ({
+    return selectedWorkout.exercises.map((ex): LocalExercise => ({
       id: ex.id,
       exerciseId: ex.exerciseId,
       name: ex.exerciseName,
@@ -143,11 +168,10 @@ export default function Dashboard() {
       restSeconds: ex.restSeconds || 90,
       orderIndex: ex.orderIndex,
     }));
-  }, [todayWorkout, localExercises]);
+  }, [selectedWorkout, localExercises]);
 
-  // Today's data
-  const todayData = weekData.find(d => d.isToday);
-  const completedDays = weekData.filter(d => d.completed).length;
+  // Week progress stats
+  const completedDaysCount = weekData.filter(d => d.completed).length;
   const workoutDaysCount = weekData.filter(d => d.type !== "REST").length;
   
   // Show user's name if available
@@ -155,9 +179,22 @@ export default function Dashboard() {
 
   // Calculate workout stats
   const totalSets = exercises.reduce((sum, ex) => sum + ex.sets, 0);
-  const duration = todayWorkout?.estimatedDurationMin 
-    ? `~${todayWorkout.estimatedDurationMin} min`
+  const duration = selectedWorkout?.estimatedDurationMin 
+    ? `~${selectedWorkout.estimatedDurationMin} min`
     : `~${Math.round(totalSets * 4)} min`;
+  
+  // Dynamic header title
+  const headerTitle = useMemo(() => {
+    if (isSelectedDayToday) return "TODAY";
+    if (!hasWorkoutOnSelectedDay) return "REST DAY";
+    return DAY_NAMES_FULL[selectedDayOfWeek];
+  }, [isSelectedDayToday, hasWorkoutOnSelectedDay, selectedDayOfWeek]);
+  
+  // Handle day click
+  const handleDayClick = (dayOfWeek: number) => {
+    vibrate("light");
+    setSelectedDayOfWeek(dayOfWeek);
+  };
 
   // Hook to fetch API exercise data for the selected exercise
   const { data: apiExerciseData } = useExercise(
@@ -215,11 +252,11 @@ export default function Dashboard() {
   const currentExerciseData = apiExerciseData || null;
 
   // Loading state
-  const isLoading = isAuthLoading || isWorkoutsLoading || isTodayLoading;
+  const isLoading = isAuthLoading || isWorkoutsLoading;
 
   return (
     <div className="min-h-screen bg-background flex flex-col pb-20">
-      <AppHeader title="TODAY" streak={12} />
+      <AppHeader title={headerTitle} streak={12} />
 
       <main className="flex-1 flex flex-col">
         
@@ -238,7 +275,7 @@ export default function Dashboard() {
                 Week Progress
               </div>
               <div className="flex items-center gap-1 px-2 py-0.5 bg-accent/20 text-accent-foreground">
-                <span className="font-mono text-xs font-bold">{completedDays}/{workoutDaysCount}</span>
+                <span className="font-mono text-xs font-bold">{completedDaysCount}/{workoutDaysCount}</span>
               </div>
             </div>
             {weekExpanded ? (
@@ -250,36 +287,47 @@ export default function Dashboard() {
 
           {/* Week days strip */}
           <div className="flex border-t border-gray-200 overflow-x-auto scrollbar-hide">
-            {weekData.map((day, i) => (
-              <div
-                key={i}
-                className={`flex flex-col items-center justify-center min-w-[calc(100%/7)] py-3 border-r border-gray-100 last:border-r-0 ${
-                  day.isToday 
-                    ? "bg-black text-white" 
-                    : day.completed 
-                      ? "bg-accent/10" 
-                      : ""
-                }`}
-              >
-                <span className="text-[10px] font-bold uppercase mb-1 opacity-60">
-                  {day.day}
-                </span>
-                <span className="text-lg font-display font-bold">
-                  {day.date}
-                </span>
-                <div className="mt-1.5 h-4 flex items-center justify-center">
-                  {day.completed ? (
-                    <Check className="w-4 h-4 text-green-600" />
-                  ) : day.type === "REST" ? (
-                    <Minus className="w-4 h-4 opacity-30" />
-                  ) : day.isToday ? (
-                    <Zap className="w-4 h-4 text-accent" />
-                  ) : (
-                    <div className="w-2 h-2 rounded-full bg-gray-300" />
-                  )}
-                </div>
-              </div>
-            ))}
+            {weekData.map((day, i) => {
+              const isSelected = day.dayOfWeek === selectedDayOfWeek;
+              const hasWorkout = day.type !== "REST";
+              
+              return (
+                <button
+                  key={i}
+                  onClick={() => handleDayClick(day.dayOfWeek)}
+                  className={`flex flex-col items-center justify-center min-w-[calc(100%/7)] py-3 border-r border-gray-100 last:border-r-0 
+                    touch-manipulation transition-colors duration-150
+                    ${isSelected 
+                      ? "bg-black text-white" 
+                      : day.completed 
+                        ? "bg-accent/10 hover:bg-accent/20" 
+                        : hasWorkout
+                          ? "hover:bg-gray-50"
+                          : "hover:bg-gray-50"
+                    }
+                    ${isSelected && !day.isToday ? "ring-2 ring-accent ring-inset" : ""}
+                  `}
+                >
+                  <span className="text-[10px] font-bold uppercase mb-1 opacity-60">
+                    {day.day}
+                  </span>
+                  <span className="text-lg font-display font-bold">
+                    {day.date}
+                  </span>
+                  <div className="mt-1.5 h-4 flex items-center justify-center">
+                    {day.completed ? (
+                      <Check className="w-4 h-4 text-green-600" />
+                    ) : day.type === "REST" ? (
+                      <Minus className="w-4 h-4 opacity-30" />
+                    ) : day.isToday ? (
+                      <Zap className="w-4 h-4 text-accent" />
+                    ) : (
+                      <div className="w-2 h-2 rounded-full bg-gray-300" />
+                    )}
+                  </div>
+                </button>
+              );
+            })}
           </div>
 
           {/* Expanded week details */}
@@ -295,7 +343,7 @@ export default function Dashboard() {
                       vibrate("light");
                       setScheduleOpen(true);
                     }}
-                    className="text-xs font-mono uppercase text-accent hover:text-black transition-colors"
+                    className="text-xs font-mono uppercase text-green-700 hover:text-black transition-colors"
                   >
                     Edit Schedule
                   </button>
@@ -338,8 +386,22 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Today's Workout Section */}
+        {/* Selected Day's Workout Section */}
         <div className="flex-1 p-4 space-y-4 pb-32">
+          
+          {/* Back to Today button (when viewing another day) */}
+          {!isSelectedDayToday && (
+            <button
+              onClick={() => {
+                vibrate("light");
+                setSelectedDayOfWeek(todayDayOfWeek);
+              }}
+              className="flex items-center gap-2 text-sm text-green-700 hover:text-black transition-colors font-mono uppercase"
+            >
+              <RotateCcw className="w-4 h-4" />
+              Back to Today
+            </button>
+          )}
           
           {/* Auth prompt for unauthenticated users */}
           {!isAuthenticated && !isAuthLoading && (
@@ -371,14 +433,16 @@ export default function Dashboard() {
             </div>
           )}
 
-          {/* No workout for today */}
-          {!isLoading && isAuthenticated && !hasWorkout && (
+          {/* No workout for selected day (Rest Day) */}
+          {!isLoading && isAuthenticated && !hasWorkoutOnSelectedDay && (
             <div className="border-2 border-gray-200 bg-white p-8 text-center">
               <Calendar className="w-8 h-8 mx-auto mb-3 text-gray-300" />
               <h2 className="font-display text-xl font-bold mb-2">Rest Day</h2>
               <p className="text-sm text-gray-500 mb-4">
                 {apiWorkouts && apiWorkouts.length > 0 
-                  ? "No workout scheduled for today. Enjoy your recovery!"
+                  ? isSelectedDayToday 
+                    ? "No workout scheduled for today. Enjoy your recovery!"
+                    : `No workout scheduled for ${DAY_NAMES_FULL[selectedDayOfWeek].toLowerCase()}. It's a rest day!`
                   : "No workouts generated yet. Complete onboarding to get your personalized program."
                 }
               </p>
@@ -395,16 +459,16 @@ export default function Dashboard() {
           )}
 
           {/* Workout Header Card */}
-          {!isLoading && hasWorkout && todayWorkout && (
+          {!isLoading && hasWorkoutOnSelectedDay && selectedWorkout && (
             <>
               <div className="border border-gray-200 bg-white p-4 rounded-xl shadow-sm">
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
-                      Today's Protocol
+                      {isSelectedDayToday ? "Today's Protocol" : `${DAY_NAMES_FULL[selectedDayOfWeek]}'s Protocol`}
                     </div>
                     <h1 className="font-display text-2xl font-black uppercase">
-                      {todayWorkout.name}
+                      {selectedWorkout.name}
                     </h1>
                   </div>
                   <div className="text-right">
@@ -424,10 +488,10 @@ export default function Dashboard() {
                     <span className="text-gray-500">SETS:</span>{" "}
                     <span className="font-bold">{totalSets}</span>
                   </div>
-                  {todayWorkout.targetMuscles && todayWorkout.targetMuscles.length > 0 && (
+                  {selectedWorkout.targetMuscles && selectedWorkout.targetMuscles.length > 0 && (
                     <div className="flex-1 text-right">
                       <span className="text-gray-400">
-                        {todayWorkout.targetMuscles.slice(0, 3).join(" • ")}
+                        {selectedWorkout.targetMuscles.slice(0, 3).join(" • ")}
                       </span>
                     </div>
                   )}
@@ -525,22 +589,44 @@ export default function Dashboard() {
           )}
         </div>
 
-        {/* Fixed Start Workout CTA */}
-        {!isLoading && hasWorkout && exercises.length > 0 && (
+        {/* Fixed Start Workout CTA - Only show for today's workout */}
+        {!isLoading && hasWorkoutOnSelectedDay && exercises.length > 0 && (
           <div className="fixed bottom-20 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
-            <Link 
-              href={`/session?workoutId=${todayWorkout?.id}`}
-              onClick={() => vibrate("medium")}
-              className="flex items-center justify-center gap-2 w-full min-h-[56px] 
-                bg-black text-white font-mono font-bold text-lg uppercase tracking-wider
-                rounded-xl shadow-lg hover:bg-gray-900 hover:scale-[1.01]
-                transition-all active:scale-[0.99]
-                touch-manipulation"
-            >
-              <Zap className="w-5 h-5" />
-              Start Workout
-              <ChevronRight className="w-5 h-5" />
-            </Link>
+            {isSelectedDayToday ? (
+              <Link 
+                href={`/session?workoutId=${selectedWorkout?.id}`}
+                onClick={() => vibrate("medium")}
+                className="flex items-center justify-center gap-2 w-full min-h-[56px] 
+                  bg-black text-white font-mono font-bold text-lg uppercase tracking-wider
+                  rounded-xl shadow-lg hover:bg-gray-900 hover:scale-[1.01]
+                  transition-all active:scale-[0.99]
+                  touch-manipulation"
+              >
+                <Zap className="w-5 h-5" />
+                Start Workout
+                <ChevronRight className="w-5 h-5" />
+              </Link>
+            ) : (
+              <div className="flex flex-col items-center gap-2">
+                <div 
+                  className="flex items-center justify-center gap-2 w-full min-h-[56px] 
+                    bg-gray-300 text-gray-500 font-mono font-bold text-lg uppercase tracking-wider
+                    rounded-xl cursor-not-allowed"
+                >
+                  <Calendar className="w-5 h-5" />
+                  Preview Only
+                </div>
+                <button
+                  onClick={() => {
+                    vibrate("light");
+                    setSelectedDayOfWeek(todayDayOfWeek);
+                  }}
+                  className="text-sm text-green-700 hover:text-black transition-colors font-mono uppercase"
+                >
+                  Go to Today →
+                </button>
+              </div>
+            )}
           </div>
         )}
       </main>
