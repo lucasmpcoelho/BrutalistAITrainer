@@ -72,17 +72,18 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const [weekExpanded, setWeekExpanded] = useState(false);
   const { vibrate } = useHaptics();
-  const { isAuthenticated, userProfile, isLoading: isAuthLoading } = useAuth();
+  const { isAuthenticated, userProfile, isLoading: isAuthLoading, firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid ?? null;
   
   // Selected day of week for viewing workouts (0=Sunday, 1=Monday, etc.)
   const todayDayOfWeek = new Date().getDay();
   const [selectedDayOfWeek, setSelectedDayOfWeek] = useState<number>(todayDayOfWeek);
   
-  // Fetch workouts from API
-  const { data: apiWorkouts, isLoading: isWorkoutsLoading } = useWorkouts();
+  // Fetch workouts from API (with userId for cache isolation)
+  const { data: apiWorkouts, isLoading: isWorkoutsLoading } = useWorkouts(userId);
   
-  // Fetch recent sessions to check completion status
-  const { data: sessions } = useSessions(10);
+  // Fetch recent sessions to check completion status (with userId for cache isolation)
+  const { data: sessions } = useSessions(userId, 10);
 
   // Local state for exercises (allows swapping/skipping)
   const [localExercises, setLocalExercises] = useState<LocalExercise[] | null>(null);

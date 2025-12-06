@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/sheet";
 import { useWorkouts, useUpdateWorkout, type Workout } from "@/hooks/use-workouts";
 import { useHaptics } from "@/hooks/use-haptics";
+import { useAuth } from "@/contexts/AuthContext";
 
 const DAY_NAMES = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const DAY_NAMES_FULL = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
@@ -22,8 +23,12 @@ interface ScheduleEditorProps {
 
 export default function ScheduleEditor({ open, onOpenChange }: ScheduleEditorProps) {
   const { vibrate } = useHaptics();
-  const { data: workouts, isLoading } = useWorkouts();
-  const updateWorkout = useUpdateWorkout();
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid ?? null;
+  
+  // Fetch workouts and update hooks with userId for cache isolation
+  const { data: workouts, isLoading } = useWorkouts(userId);
+  const updateWorkout = useUpdateWorkout(userId);
   
   // Track schedule by day: { dayOfWeek: workoutId | null }
   const [dayAssignments, setDayAssignments] = useState<Record<number, string | null>>({});

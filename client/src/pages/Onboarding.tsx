@@ -294,8 +294,10 @@ function CompletionScreen({ answers, firebaseUser, queryClient, onNavigate }: Co
         await new Promise(resolve => setTimeout(resolve, 300));
         setStatusMessages(prev => [...prev, "SYNCHRONIZING DATA CACHE..."]);
         
-        await queryClient.invalidateQueries({ queryKey: ["workouts"] });
-        await queryClient.refetchQueries({ queryKey: ["workouts"] });
+        // Use userId in query key for proper cache isolation
+        const userId = firebaseUser.uid;
+        await queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+        await queryClient.refetchQueries({ queryKey: ["workouts", userId] });
         
         await new Promise(resolve => setTimeout(resolve, 400));
         setStatusMessages(prev => [...prev, "ALL SYSTEMS NOMINAL ✓"]);

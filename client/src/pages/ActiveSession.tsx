@@ -18,6 +18,7 @@ import {
   useCompleteSession,
   useActiveSession 
 } from "@/hooks/use-sessions";
+import { useAuth } from "@/contexts/AuthContext";
 import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
 
 // Exercise type for local session state
@@ -35,6 +36,8 @@ interface SessionExercise {
 export default function ActiveSession() {
   const [, setLocation] = useLocation();
   const searchParams = useSearch();
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid ?? null;
   
   // Parse workout ID from URL
   const workoutId = useMemo(() => {
@@ -42,8 +45,8 @@ export default function ActiveSession() {
     return params.get("workoutId");
   }, [searchParams]);
 
-  // Fetch workout data
-  const { data: workoutData, isLoading: isWorkoutLoading } = useWorkout(workoutId);
+  // Fetch workout data (with userId for cache isolation)
+  const { data: workoutData, isLoading: isWorkoutLoading } = useWorkout(workoutId, userId);
   
   // Session state
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -61,11 +64,11 @@ export default function ActiveSession() {
   
   const { vibrate } = useHaptics();
 
-  // Session hooks
-  const startSession = useStartSession();
-  const logSet = useLogSet();
-  const completeSession = useCompleteSession();
-  const { session: existingActiveSession } = useActiveSession();
+  // Session hooks (with userId for cache isolation)
+  const startSession = useStartSession(userId);
+  const logSet = useLogSet(userId);
+  const completeSession = useCompleteSession(userId);
+  const { session: existingActiveSession } = useActiveSession(userId);
 
   // Build exercises array from workout data
   const exercises: SessionExercise[] = useMemo(() => {

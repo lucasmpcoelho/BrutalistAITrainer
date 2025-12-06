@@ -10,6 +10,7 @@ import {
   type FirebaseUser,
   type UserProfile,
 } from "@/lib/firebase";
+import { queryClient } from "@/lib/queryClient";
 
 // ============================================================================
 // TYPES
@@ -99,18 +100,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // Auth methods
   const loginWithGoogle = async () => {
+    // Clear cached data from previous user before login
+    queryClient.clear();
     setIsProfileLoading(true); // Set loading before auth completes
     await signInWithGoogle();
     // Profile will be fetched by onAuthChange listener
   };
 
   const loginWithEmail = async (email: string, password: string) => {
+    // Clear cached data from previous user before login
+    queryClient.clear();
     setIsProfileLoading(true);
     await signInWithEmail(email, password);
     // Profile will be fetched by onAuthChange listener
   };
 
   const registerWithEmailPassword = async (email: string, password: string) => {
+    // Clear cached data from previous user before registration
+    queryClient.clear();
     setIsProfileLoading(true);
     await registerWithEmail(email, password);
     // Profile will be created and fetched by onAuthChange listener
@@ -119,6 +126,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = async () => {
     await firebaseSignOut();
     setUserProfile(null);
+    // Clear all cached queries to ensure data isolation between users
+    queryClient.clear();
   };
 
   // Computed states

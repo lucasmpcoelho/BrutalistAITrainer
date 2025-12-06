@@ -190,93 +190,110 @@ async function deleteAllWorkouts(): Promise<{ message: string; deletedCount: num
 // ============================================================================
 
 /**
- * Fetch all workouts for the current user
+ * Fetch all workouts for a specific user
+ * @param userId - Firebase user ID (required for cache isolation between users)
  */
-export function useWorkouts() {
+export function useWorkouts(userId: string | null) {
   return useQuery({
-    queryKey: ["workouts"],
+    queryKey: ["workouts", userId],
     queryFn: fetchWorkouts,
+    enabled: !!userId,
     staleTime: 5 * 60 * 1000, // 5 minutes
   });
 }
 
 /**
  * Fetch a single workout by ID
+ * @param id - Workout ID
+ * @param userId - Firebase user ID (required for cache isolation between users)
  */
-export function useWorkout(id: string | null) {
+export function useWorkout(id: string | null, userId: string | null) {
   return useQuery({
-    queryKey: ["workout", id],
+    queryKey: ["workout", userId, id],
     queryFn: () => fetchWorkout(id!),
-    enabled: !!id,
+    enabled: !!id && !!userId,
     staleTime: 5 * 60 * 1000,
   });
 }
 
 /**
  * Create a new workout
+ * @param userId - Firebase user ID (for cache invalidation)
  */
-export function useCreateWorkout() {
+export function useCreateWorkout(userId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: createWorkout,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+      }
     },
   });
 }
 
 /**
  * Update a workout
+ * @param userId - Firebase user ID (for cache invalidation)
  */
-export function useUpdateWorkout() {
+export function useUpdateWorkout(userId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: ({ id, data }: { id: string; data: Partial<CreateWorkoutData> }) =>
       updateWorkout(id, data),
     onSuccess: (_, { id }) => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      queryClient.invalidateQueries({ queryKey: ["workout", id] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["workout", userId, id] });
+      }
     },
   });
 }
 
 /**
  * Delete a workout
+ * @param userId - Firebase user ID (for cache invalidation)
  */
-export function useDeleteWorkout() {
+export function useDeleteWorkout(userId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: deleteWorkout,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+      }
     },
   });
 }
 
 /**
  * Add an exercise to a workout
+ * @param userId - Firebase user ID (for cache invalidation)
  */
-export function useAddExerciseToWorkout() {
+export function useAddExerciseToWorkout(userId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: ({ workoutId, data }: { workoutId: string; data: AddExerciseData }) =>
       addExerciseToWorkout(workoutId, data),
     onSuccess: (_, { workoutId }) => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
-      queryClient.invalidateQueries({ queryKey: ["workout", workoutId] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["workout", userId, workoutId] });
+      }
     },
   });
 }
 
 /**
  * Get today's workout based on day of week
+ * @param userId - Firebase user ID (required for cache isolation between users)
  */
-export function useTodayWorkout() {
-  const { data: workouts, isLoading } = useWorkouts();
+export function useTodayWorkout(userId: string | null) {
+  const { data: workouts, isLoading } = useWorkouts(userId);
   
   const today = new Date().getDay(); // 0 = Sunday, 1 = Monday, etc.
   const todayWorkout = workouts?.find(w => w.dayOfWeek === today && w.isActive);
@@ -291,14 +308,17 @@ export function useTodayWorkout() {
 /**
  * Delete all workouts and reset onboarding status
  * Used for "Reset Training Plan" feature
+ * @param userId - Firebase user ID (for cache invalidation)
  */
-export function useDeleteAllWorkouts() {
+export function useDeleteAllWorkouts(userId: string | null) {
   const queryClient = useQueryClient();
   
   return useMutation({
     mutationFn: deleteAllWorkouts,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["workouts"] });
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+      }
     },
   });
 }

@@ -19,13 +19,15 @@ export default function AppHeader({
 }: AppHeaderProps) {
   const { vibrate } = useHaptics();
   const { userProfile, firebaseUser, logout, isAuthenticated, refetchProfile } = useAuth();
+  const userId = firebaseUser?.uid ?? null;
   const [menuOpen, setMenuOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
   const [resetConfirmOpen, setResetConfirmOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [, setLocation] = useLocation();
   
-  const deleteAllWorkouts = useDeleteAllWorkouts();
+  // Pass userId for cache isolation
+  const deleteAllWorkouts = useDeleteAllWorkouts(userId);
 
   // Close menu when clicking outside
   useEffect(() => {
