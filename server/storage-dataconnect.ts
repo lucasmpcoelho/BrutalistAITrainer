@@ -385,14 +385,62 @@ export class DataConnectStorage implements IStorage {
   }
 
   async updateWorkoutExercise(id: string, exercise: Partial<InsertWorkoutExercise>): Promise<WorkoutExercise | undefined> {
+    // Execute mutation with allowed fields
     await executeOperation(
       "UpdateWorkoutExercise",
-      { id, ...exercise },
+      {
+        id,
+        exerciseId: exercise.exerciseId,
+        exerciseName: exercise.exerciseName,
+        orderIndex: exercise.orderIndex,
+        targetSets: exercise.targetSets,
+        targetReps: exercise.targetReps,
+        targetRpe: exercise.targetRpe,
+        restSeconds: exercise.restSeconds,
+        notes: exercise.notes,
+      },
       false
     );
     
-    // Caller will fetch the updated exercise list; we don't depend on a per-exercise query here
-    return undefined;
+    // Fetch and return the updated exercise
+    interface WorkoutExerciseResult {
+      workoutExercise: {
+        id: string;
+        exerciseId: string;
+        exerciseName: string;
+        orderIndex: number;
+        targetSets: number;
+        targetReps: string;
+        targetRpe: number | null;
+        restSeconds: number | null;
+        notes: string | null;
+        createdAt: string;
+        workout: { id: string } | null;
+      } | null;
+    }
+    
+    const result = await executeOperation<WorkoutExerciseResult>(
+      "GetWorkoutExercise",
+      { id },
+      true
+    );
+    
+    if (!result.workoutExercise) return undefined;
+    
+    const e = result.workoutExercise;
+    return {
+      id: e.id,
+      workoutId: e.workout?.id ?? "",
+      exerciseId: e.exerciseId,
+      exerciseName: e.exerciseName,
+      orderIndex: e.orderIndex,
+      targetSets: e.targetSets,
+      targetReps: e.targetReps,
+      targetRpe: e.targetRpe,
+      restSeconds: e.restSeconds,
+      notes: e.notes,
+      createdAt: new Date(e.createdAt),
+    };
   }
 
   async removeWorkoutExercise(id: string): Promise<boolean> {

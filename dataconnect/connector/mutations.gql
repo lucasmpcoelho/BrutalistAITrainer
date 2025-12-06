@@ -84,7 +84,7 @@ mutation AddWorkoutExercise(
   })
 }
 
-# Update workout exercise (includes exerciseId/exerciseName for swap feature)
+# Update workout exercise
 mutation UpdateWorkoutExercise(
   $id: UUID!
   $exerciseId: String
