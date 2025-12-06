@@ -364,14 +364,10 @@ router.put("/:workoutId/exercises/:exerciseId", verifyFirebaseToken, async (req:
       return res.status(403).json({ error: "Access denied" });
     }
     
-    // Execute the update
-    await storage.updateWorkoutExercise(req.params.exerciseId, req.body);
-    
-    // Fetch the updated exercise using the already-deployed list query
-    const exercises = await storage.getWorkoutExercises(req.params.workoutId);
-    const updated = exercises.find(e => e.id === req.params.exerciseId);
+    const updated = await storage.updateWorkoutExercise(req.params.exerciseId, req.body);
     
     if (!updated) {
+      console.error(`[workouts] Update failed: Exercise ${req.params.exerciseId} not returned by storage adapter`);
       return res.status(404).json({ error: "Exercise not found" });
     }
     

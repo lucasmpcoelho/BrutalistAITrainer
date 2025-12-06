@@ -25,7 +25,7 @@ import ScheduleEditor from "@/components/ScheduleEditor";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWorkouts, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
+import { useWorkouts, useUpdateWorkoutExercise, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
 import { useSessions } from "@/hooks/use-sessions";
 
 // Day names for display
@@ -84,6 +84,16 @@ export default function Dashboard() {
   
   // Fetch recent sessions to check completion status (with userId for cache isolation)
   const { data: sessions } = useSessions(userId, 10);
+  
+  // Mutation for updating exercises
+  const { mutate: updateExercise } = useUpdateWorkoutExercise(userId);
+
+  // Debug: Log mutation errors
+  useEffect(() => {
+    // This hook allows us to intercept the mutation result if needed, 
+    // but the best place is in the onError callback of the mutation itself.
+    // We'll update the usage in handleSwap instead.
+  }, []);
 
   // Local state for exercises (allows swapping/skipping)
   const [localExercises, setLocalExercises] = useState<LocalExercise[] | null>(null);
@@ -235,6 +245,34 @@ export default function Dashboard() {
 
   const handleSwap = (newExercise: Exercise) => {
     if (!selectedExercise) return;
+    
+    // Update backend if we have a valid workout
+    if (selectedWorkout) {
+      console.log("[Dashboard] Swapping exercise:", {
+        workoutId: selectedWorkout.id,
+        exerciseId: selectedExercise.id,
+        newExerciseId: newExercise.id,
+        newExerciseName: newExercise.name
+      });
+      
+      updateExercise({
+        workoutId: selectedWorkout.id,
+        exerciseId: selectedExercise.id, // This is the workout_exercise ID
+        data: {
+          exerciseId: newExercise.id, // The new exercise definition ID
+          exerciseName: newExercise.name,
+        }
+      }, {
+        onError: (error) => {
+          console.error("[Dashboard] Swap failed on backend:", error);
+          alert(`Failed to save swap: ${error.message}`);
+          // Revert local state if needed (optional)
+        },
+        onSuccess: () => {
+          console.log("[Dashboard] Swap saved successfully");
+        }
+      });
+    }
     
     const newExercises = exercises.map(ex => 
       ex.id === selectedExercise.id

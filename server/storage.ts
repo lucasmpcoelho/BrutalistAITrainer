@@ -586,11 +586,14 @@ import { DataConnectStorage } from "./storage-dataconnect";
 
 function createStorage(): IStorage {
   // Priority 1: Firebase Data Connect (Cloud SQL)
+  // Force enable if FIREBASE_PROJECT_ID is present, as we are in a DataConnect project
   const useDataConnect = process.env.USE_DATA_CONNECT === "true" || 
-                         process.env.DATA_CONNECT_EMULATOR_HOST;
+                         process.env.DATA_CONNECT_EMULATOR_HOST ||
+                         !!process.env.FIREBASE_PROJECT_ID; // Auto-enable if project ID set
   
   if (useDataConnect && process.env.FIREBASE_PROJECT_ID) {
     console.log("[storage] Using DataConnectStorage (Firebase Data Connect)");
+    console.log("[storage] Project ID:", process.env.FIREBASE_PROJECT_ID);
     return new DataConnectStorage();
   }
   

@@ -85,10 +85,9 @@ mutation AddWorkoutExercise(
 }
 
 # Update workout exercise
+# Update workout exercise (Reverted to original - for stats/notes only)
 mutation UpdateWorkoutExercise(
   $id: UUID!
-  $exerciseId: String
-  $exerciseName: String
   $orderIndex: Int
   $targetSets: Int
   $targetReps: String
@@ -97,14 +96,24 @@ mutation UpdateWorkoutExercise(
   $notes: String
 ) @auth(level: PUBLIC) {
   workoutExercise_update(id: $id, data: {
-    exerciseId: $exerciseId
-    exerciseName: $exerciseName
     orderIndex: $orderIndex
     targetSets: $targetSets
     targetReps: $targetReps
     targetRpe: $targetRpe
     restSeconds: $restSeconds
     notes: $notes
+  })
+}
+
+# Swap exercise (New - only updates identity)
+mutation SwapWorkoutExercise(
+  $id: UUID!
+  $exerciseId: String!
+  $exerciseName: String!
+) @auth(level: PUBLIC) {
+  workoutExercise_update(id: $id, data: {
+    exerciseId: $exerciseId
+    exerciseName: $exerciseName
   })
 }
 

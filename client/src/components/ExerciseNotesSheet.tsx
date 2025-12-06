@@ -112,10 +112,10 @@ export default function ExerciseNotesSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent 
         side="bottom" 
-        className="h-[85vh] rounded-t-xl border-t border-gray-200 p-0 bg-white"
+        className="h-[85vh] rounded-t-xl border-t border-gray-200 p-0 bg-white [&>button]:z-50"
       >
         {/* Drag handle */}
-        <div className="flex justify-center pt-3 pb-2">
+        <div className="flex justify-center pt-3 pb-6">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
         </div>
 

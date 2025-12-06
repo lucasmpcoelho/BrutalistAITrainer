@@ -114,25 +114,6 @@ query GetWorkoutExercises($workoutId: UUID!) @auth(level: PUBLIC) {
   }
 }
 
-# Get a single workout exercise by ID (for updates)
-query GetWorkoutExercise($id: UUID!) @auth(level: PUBLIC) {
-  workoutExercise(id: $id) {
-    id
-    exerciseId
-    exerciseName
-    orderIndex
-    targetSets
-    targetReps
-    targetRpe
-    restSeconds
-    notes
-    createdAt
-    workout {
-      id
-    }
-  }
-}
-
 # ============================================================================
 # SESSION QUERIES
 # ============================================================================

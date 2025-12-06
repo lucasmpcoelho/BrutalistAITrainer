@@ -1,8 +1,8 @@
 # IRON_AI — Product Roadmap
 
-> **Last Updated:** 2025-12-05  
+> **Last Updated:** 2025-12-06  
 > **Current Phase:** Phase 2 — Backend & Persistence (Complete), Phase 2.9 — UX Bug Fixes (In Progress)  
-> **Status:** Firebase Data Connect deployed to Cloud SQL. Workout generation working with persistent storage. Training plan management features added (reset plan, edit schedule). Schedule editor redesigned with dropdown UX. **Onboarding race condition FIXED** — completion screen now shows 3-second animated delay before navigation. Two UX bugs remaining (swap alternatives, exercise coverage).
+> **Status:** Firebase Data Connect deployed to Cloud SQL. Workout generation working with persistent storage. Training plan management features added (reset plan, edit schedule). Schedule editor redesigned with dropdown UX. **Onboarding race condition FIXED** — completion screen now shows 3-second animated delay before navigation. Swap/Notes sheet UI glitch fixed.
 
 ---
 
@@ -59,12 +59,10 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [x] Notes bottom sheet with key cues and common mistakes
 - [x] Skip confirmation with "Swap instead?" option
 - [x] Swap bottom sheet with 3 deterministic alternatives
-
 - [x] **Firebase Authentication** — Google Sign-In + email/password with Firebase Auth
 - [x] **Firestore user profiles** — User data stored in Firestore `users` collection with preferences
 - [x] **Auth flow gating** — Landing → Auth → Onboarding → Dashboard (skips onboarding if completed)
 - [x] **Account menu** — Profile picture/gear icon with user info and logout button
-
 - [x] **Workout generation service** — Rule-based workout generator (`server/services/workout-generator.ts`) with equipment-aware exercise selection
 - [x] **Generate API endpoint** — `POST /api/workouts/generate` reads Firestore profile, generates workouts
 - [x] **Day selection in onboarding** — Users select which days to train (Mon-Sun checkboxes after frequency)
@@ -72,16 +70,16 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [x] **Dashboard real data hooks** — `useTodayWorkout()`, `useWorkouts()` replace mock data
 - [x] **ActiveSession real data** — Uses `useWorkout(id)`, `useStartSession()`, `useLogSet()`, `useCompleteSession()`
 - [x] **Schedule editor component** — `client/src/components/ScheduleEditor.tsx` for post-generation day adjustment
-
 - [x] **Firebase Data Connect** — Cloud SQL PostgreSQL backend with GraphQL schema and type-safe SDK
 - [x] **Persistent workout storage** — Workouts now persist across server restarts and sessions
 - [x] **Reset Training Plan** — Users can delete all workouts and re-onboard from AppHeader menu
 - [x] **Edit Schedule** — Schedule editor accessible from AppHeader menu for day adjustments
 - [x] **SwapExercise fix** — Route ordering bug fixed, alternatives now load correctly
+- [x] **Sheet UI fix** — Removed double close buttons on Swap/Notes sheets
+- [x] **Notes Sheet Close Button** — Fixed covered close button on Exercise Notes sheet by using a floating button with z-index
 
 ### Known Issues
-1. ~~**Workout loading race condition**~~ — **FIXED**: Added 3-second animated completion screen that auto-starts workout generation and only navigates after both API completion AND minimum delay. Deferred `refetchProfile()` to button click to prevent premature route redirect.
-2. **Swap exercise not loading alternatives** — SwapExerciseSheet opens but alternatives don't appear. The refactor to pass `exerciseId` and fetch internally may have issues with the API endpoint or data flow.
+1. **Swap exercise not loading alternatives** — SwapExerciseSheet opens but alternatives don't appear. The refactor to pass `exerciseId` and fetch internally may have issues with the API endpoint or data flow.
 3. **Exercise bank gaps for equipment-less users** — When users select "no equipment" during onboarding, the workout generator may not find suitable exercises, resulting in empty workout days. Need to audit exercise database coverage for bodyweight exercises.
 
 ### Not Implemented
@@ -94,7 +92,7 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 
 ### Active Work
 - ✅ **Phase 2 Complete** — Firebase Data Connect deployed, workout generation working, training plan management features added.
-- 🔧 **Phase 2.9 In Progress** — ~~Race condition~~ FIXED! Remaining: swap exercise alternatives, exercise coverage for equipment-less users.
+- 🔧 **Phase 2.9 In Progress** — ~~Race condition~~ FIXED! Swap/Notes UI fixed. Remaining: swap exercise alternatives logic, exercise coverage.
 - 🔜 **Next: Phase 2.10 (Active Session Video Redesign)** — AI-generated exercise videos, immersive session UI, enhanced notes.
 - 🔜 **Future: Phase 3 (Gamification)** — Achievement system, PRs, streaks, progress visualization.
 
@@ -546,6 +544,11 @@ exercises/{exerciseId}
 | P2.9-09 | [ ] | Add fallback exercises for each body part when equipment filter returns empty | `server/services/workout-generator.ts` |
 | P2.9-10 | [ ] | Consider expanding equipment options in onboarding (e.g., "minimal" includes bands/mat) | `client/src/pages/Onboarding.tsx` |
 
+### 2.9.4 UI Glitches — ✅ FIXED
+| ID | Status | Task | Files |
+|----|--------|------|-------|
+| P2.9-11 | [x] | Fix double close buttons on Swap and Notes sheets | `client/src/components/SwapExerciseSheet.tsx`, `client/src/components/ExerciseNotesSheet.tsx` |
+
 ---
 
 ## Phase 2.10: Active Session Video Redesign
@@ -725,3 +728,6 @@ exercises/{exerciseId}
 | 2025-12-05 | P2.9-01 to P2.9-03 completed | **Onboarding Race Condition FIXED**: Root cause was `refetchProfile()` updating auth context, triggering `OnboardingRoute` to redirect before 3-second delay. Fix: (1) Auto-start save/generate on completion screen mount, (2) Add 3-second minimum delay with animated terminal-style status messages, (3) Defer `refetchProfile()` to button click. Users now see celebratory completion screen with progress messages before dashboard. |
 | 2025-12-05 | UI Refinement | **Visual Polish**: Refined Dashboard, Coach, Health, and Active Session screens (plus related components) to use soft gray borders (`border-gray-200`) and rounded corners (`rounded-xl`) instead of hard black outlines. Reduced shadow intensity to `shadow-sm` to reduce visual clutter and improve content readability. |
 | 2025-12-05 | Phase 2.10 added | **Active Session Video Redesign**: Added new phase for AI-generated exercise demonstration videos (4s looping MP4s), video player component with image fallback, redesigned ActiveSession UI with video at top and controls at bottom, enhanced notes sheet with phase-organized cues. |
+| 2025-12-06 | P2.9-11 completed | **UI Glitches**: Fixed issue with double close buttons on SwapExerciseSheet and ExerciseNotesSheet by removing manual buttons and relying on shadcn Sheet default. |
+| 2025-12-06 | P2.9-12 completed | **Notes Sheet Close Button**: Replaced hidden/covered default close button with a custom floating button with high z-index and backdrop blur to ensure visibility over exercise images. |
+| 2025-12-06 | P2.9-13 completed | **Swap Persistence**: Fixed bug where swapped exercises would revert on refresh. Implemented dedicated `SwapWorkoutExercise` mutation in Data Connect and updated storage adapter to handle exercise identity updates separately from stats updates. |
