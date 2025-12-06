@@ -64,6 +64,17 @@ export interface AddExerciseData {
   notes?: string;
 }
 
+export interface UpdateExerciseData {
+  exerciseId?: string;
+  exerciseName?: string;
+  orderIndex?: number;
+  targetSets?: number;
+  targetReps?: string;
+  targetRpe?: number;
+  restSeconds?: number;
+  notes?: string;
+}
+
 // ============================================================================
 // API FUNCTIONS
 // ============================================================================
@@ -185,24 +196,13 @@ async function deleteAllWorkouts(): Promise<{ message: string; deletedCount: num
   return response.json();
 }
 
-export interface UpdateWorkoutExerciseData {
-  exerciseId?: string;
-  exerciseName?: string;
-  orderIndex?: number;
-  targetSets?: number;
-  targetReps?: string;
-  targetRpe?: number;
-  restSeconds?: number;
-  notes?: string;
-}
-
 async function updateWorkoutExercise(
-  workoutId: string, 
-  workoutExerciseId: string, 
-  data: UpdateWorkoutExerciseData
+  workoutId: string,
+  exerciseId: string,
+  data: UpdateExerciseData
 ): Promise<WorkoutExercise> {
   const headers = await getAuthHeaders();
-  const response = await fetch(`/api/workouts/${workoutId}/exercises/${workoutExerciseId}`, {
+  const response = await fetch(`/api/workouts/${workoutId}/exercises/${exerciseId}`, {
     method: "PUT",
     headers,
     credentials: "include",
@@ -322,6 +322,32 @@ export function useAddExerciseToWorkout(userId: string | null) {
 }
 
 /**
+ * Update an exercise in a workout (e.g., swap exercise)
+ * @param userId - Firebase user ID (for cache invalidation)
+ */
+export function useUpdateWorkoutExercise(userId: string | null) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ 
+      workoutId, 
+      exerciseId, 
+      data 
+    }: { 
+      workoutId: string; 
+      exerciseId: string; 
+      data: UpdateExerciseData 
+    }) => updateWorkoutExercise(workoutId, exerciseId, data),
+    onSuccess: (_, { workoutId }) => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["workout", userId, workoutId] });
+      }
+    },
+  });
+}
+
+/**
  * Get today's workout based on day of week
  * @param userId - Firebase user ID (required for cache isolation between users)
  */
@@ -351,33 +377,6 @@ export function useDeleteAllWorkouts(userId: string | null) {
     onSuccess: () => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
-      }
-    },
-  });
-}
-
-/**
- * Update a workout exercise (used for swap feature)
- * @param userId - Firebase user ID (for cache invalidation)
- */
-export function useUpdateWorkoutExercise(userId: string | null) {
-  const queryClient = useQueryClient();
-  
-  return useMutation({
-    mutationFn: ({ 
-      workoutId, 
-      workoutExerciseId, 
-      data 
-    }: { 
-      workoutId: string; 
-      workoutExerciseId: string; 
-      data: UpdateWorkoutExerciseData 
-    }) => updateWorkoutExercise(workoutId, workoutExerciseId, data),
-    onSuccess: (_, { workoutId }) => {
-      if (userId) {
-        // Invalidate both the workout list and the specific workout
-        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
-        queryClient.invalidateQueries({ queryKey: ["workout", userId, workoutId] });
       }
     },
   });

@@ -85,8 +85,8 @@ export default function Dashboard() {
   // Fetch recent sessions to check completion status (with userId for cache isolation)
   const { data: sessions } = useSessions(userId, 10);
   
-  // Mutation hook for updating exercises (used for swap feature)
-  const updateExercise = useUpdateWorkoutExercise(userId);
+  // Mutation hook for updating workout exercises (for swap persistence)
+  const updateWorkoutExercise = useUpdateWorkoutExercise(userId);
 
   // Local state for exercises (allows swapping/skipping)
   const [localExercises, setLocalExercises] = useState<LocalExercise[] | null>(null);
@@ -239,7 +239,7 @@ export default function Dashboard() {
   const handleSwap = async (newExercise: Exercise) => {
     if (!selectedExercise || !selectedWorkout) return;
     
-    // Optimistic update for immediate UI feedback
+    // Update local state immediately for responsive UI
     const newExercises = exercises.map(ex => 
       ex.id === selectedExercise.id
         ? {
@@ -250,23 +250,24 @@ export default function Dashboard() {
         : ex
     );
     setLocalExercises(newExercises);
+    vibrate("success");
     
-    // Persist to backend
+    // Persist the swap to the backend
     try {
-      await updateExercise.mutateAsync({
+      await updateWorkoutExercise.mutateAsync({
         workoutId: selectedWorkout.id,
-        workoutExerciseId: selectedExercise.id,
+        exerciseId: selectedExercise.id, // This is the workout_exercise ID
         data: {
-          exerciseId: newExercise.id,
-          exerciseName: newExercise.name,
+          exerciseId: newExercise.id,     // New exercise reference
+          exerciseName: newExercise.name,  // New exercise name
         },
       });
-      vibrate("success");
+      console.log("[Dashboard] Exercise swap persisted to backend");
     } catch (error) {
-      // Revert optimistic update on error
+      console.error("[Dashboard] Failed to persist swap:", error);
+      // Revert local state on error
       setLocalExercises(null);
       vibrate("error");
-      console.error("Failed to swap exercise:", error);
     }
   };
 
