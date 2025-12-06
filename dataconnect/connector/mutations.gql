@@ -84,9 +84,11 @@ mutation AddWorkoutExercise(
   })
 }
 
-# Update workout exercise
+# Update workout exercise (includes exerciseId/exerciseName for swap feature)
 mutation UpdateWorkoutExercise(
   $id: UUID!
+  $exerciseId: String
+  $exerciseName: String
   $orderIndex: Int
   $targetSets: Int
   $targetReps: String
@@ -95,6 +97,8 @@ mutation UpdateWorkoutExercise(
   $notes: String
 ) @auth(level: PUBLIC) {
   workoutExercise_update(id: $id, data: {
+    exerciseId: $exerciseId
+    exerciseName: $exerciseName
     orderIndex: $orderIndex
     targetSets: $targetSets
     targetReps: $targetReps

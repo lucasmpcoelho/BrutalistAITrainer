@@ -119,16 +119,6 @@ export default function ExerciseNotesSheet({
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
         </div>
 
-        {/* Custom close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 w-8 h-8 flex items-center justify-center 
-            border border-gray-200 rounded-full bg-white/80 backdrop-blur-sm 
-            hover:bg-gray-100 transition-colors z-10 shadow-sm"
-        >
-          <X className="w-4 h-4 text-gray-500" />
-        </button>
-
         <div className="pb-6 overflow-y-auto h-full">
           {/* Hero GIF Section - API exercises only */}
           {isApi && exercise.gifUrl && (

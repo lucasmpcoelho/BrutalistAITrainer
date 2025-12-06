@@ -1,4 +1,4 @@
-import { X, ArrowRight, Dumbbell, Loader2 } from "lucide-react";
+import { ArrowRight, Dumbbell, Loader2 } from "lucide-react";
 import {
   Sheet,
   SheetContent,
@@ -57,15 +57,6 @@ export default function SwapExerciseSheet({
         <div className="flex justify-center pt-3 pb-2">
           <div className="w-12 h-1 bg-gray-300 rounded-full" />
         </div>
-
-        {/* Custom close button */}
-        <button
-          onClick={() => onOpenChange(false)}
-          className="absolute right-4 top-4 w-8 h-8 flex items-center justify-center 
-            border border-gray-200 rounded-full hover:bg-gray-100 transition-colors"
-        >
-          <X className="w-4 h-4 text-gray-500" />
-        </button>
 
         <div className="px-6 pb-6 overflow-y-auto h-full">
           {/* Loading state - exercise not loaded yet */}

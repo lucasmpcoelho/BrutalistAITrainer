@@ -185,6 +185,39 @@ async function deleteAllWorkouts(): Promise<{ message: string; deletedCount: num
   return response.json();
 }
 
+export interface UpdateWorkoutExerciseData {
+  exerciseId?: string;
+  exerciseName?: string;
+  orderIndex?: number;
+  targetSets?: number;
+  targetReps?: string;
+  targetRpe?: number;
+  restSeconds?: number;
+  notes?: string;
+}
+
+async function updateWorkoutExercise(
+  workoutId: string, 
+  workoutExerciseId: string, 
+  data: UpdateWorkoutExerciseData
+): Promise<WorkoutExercise> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`/api/workouts/${workoutId}/exercises/${workoutExerciseId}`, {
+    method: "PUT",
+    headers,
+    credentials: "include",
+    body: JSON.stringify(data),
+  });
+  
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.error || "Failed to update exercise");
+  }
+  
+  const result = await response.json();
+  return result.exercise;
+}
+
 // ============================================================================
 // HOOKS
 // ============================================================================
@@ -318,6 +351,33 @@ export function useDeleteAllWorkouts(userId: string | null) {
     onSuccess: () => {
       if (userId) {
         queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+      }
+    },
+  });
+}
+
+/**
+ * Update a workout exercise (used for swap feature)
+ * @param userId - Firebase user ID (for cache invalidation)
+ */
+export function useUpdateWorkoutExercise(userId: string | null) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({ 
+      workoutId, 
+      workoutExerciseId, 
+      data 
+    }: { 
+      workoutId: string; 
+      workoutExerciseId: string; 
+      data: UpdateWorkoutExerciseData 
+    }) => updateWorkoutExercise(workoutId, workoutExerciseId, data),
+    onSuccess: (_, { workoutId }) => {
+      if (userId) {
+        // Invalidate both the workout list and the specific workout
+        queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+        queryClient.invalidateQueries({ queryKey: ["workout", userId, workoutId] });
       }
     },
   });

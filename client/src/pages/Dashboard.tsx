@@ -25,7 +25,7 @@ import ScheduleEditor from "@/components/ScheduleEditor";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
-import { useWorkouts, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
+import { useWorkouts, useUpdateWorkoutExercise, type Workout, type WorkoutExercise as ApiWorkoutExercise } from "@/hooks/use-workouts";
 import { useSessions } from "@/hooks/use-sessions";
 
 // Day names for display
@@ -84,6 +84,9 @@ export default function Dashboard() {
   
   // Fetch recent sessions to check completion status (with userId for cache isolation)
   const { data: sessions } = useSessions(userId, 10);
+  
+  // Mutation hook for updating exercises (used for swap feature)
+  const updateExercise = useUpdateWorkoutExercise(userId);
 
   // Local state for exercises (allows swapping/skipping)
   const [localExercises, setLocalExercises] = useState<LocalExercise[] | null>(null);
@@ -233,9 +236,10 @@ export default function Dashboard() {
     setTimeout(() => setSwapOpen(true), 200);
   };
 
-  const handleSwap = (newExercise: Exercise) => {
-    if (!selectedExercise) return;
+  const handleSwap = async (newExercise: Exercise) => {
+    if (!selectedExercise || !selectedWorkout) return;
     
+    // Optimistic update for immediate UI feedback
     const newExercises = exercises.map(ex => 
       ex.id === selectedExercise.id
         ? {
@@ -246,7 +250,24 @@ export default function Dashboard() {
         : ex
     );
     setLocalExercises(newExercises);
-    vibrate("success");
+    
+    // Persist to backend
+    try {
+      await updateExercise.mutateAsync({
+        workoutId: selectedWorkout.id,
+        workoutExerciseId: selectedExercise.id,
+        data: {
+          exerciseId: newExercise.id,
+          exerciseName: newExercise.name,
+        },
+      });
+      vibrate("success");
+    } catch (error) {
+      // Revert optimistic update on error
+      setLocalExercises(null);
+      vibrate("error");
+      console.error("Failed to swap exercise:", error);
+    }
   };
 
   // Get current exercise data from API
