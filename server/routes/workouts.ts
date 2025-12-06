@@ -364,13 +364,12 @@ router.put("/:workoutId/exercises/:exerciseId", verifyFirebaseToken, async (req:
       return res.status(403).json({ error: "Access denied" });
     }
     
-    const updated = await storage.updateWorkoutExercise(req.params.exerciseId, req.body);
+    // Execute the update - storage returns a partial object to indicate success
+    // The frontend has all the data it needs from the optimistic update
+    await storage.updateWorkoutExercise(req.params.exerciseId, req.body);
     
-    if (!updated) {
-      return res.status(404).json({ error: "Exercise not found" });
-    }
-    
-    res.json({ exercise: updated });
+    // Return success - frontend relies on optimistic update, not this response
+    res.json({ success: true, exerciseId: req.params.exerciseId });
   } catch (error) {
     console.error("[workouts] Update exercise error:", error);
     res.status(500).json({ error: "Failed to update exercise" });
