@@ -391,13 +391,8 @@ export class DataConnectStorage implements IStorage {
       false
     );
     
-    // Return a partial object to indicate success
-    // The frontend has all the data it needs from the optimistic update
-    // We don't fetch from DB because the GetWorkoutExercise query may not be deployed yet
-    return {
-      id,
-      ...exercise,
-    } as WorkoutExercise;
+    // Caller will fetch the updated exercise list; we don't depend on a per-exercise query here
+    return undefined;
   }
 
   async removeWorkoutExercise(id: string): Promise<boolean> {
