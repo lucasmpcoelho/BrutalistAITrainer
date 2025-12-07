@@ -61,18 +61,18 @@ async function getUserProfile(userId: string): Promise<UserProfile | null> {
     console.warn("[ai-context] Firestore not initialized");
     return null;
   }
-  
+
   try {
     const userDoc = await db.collection("users").doc(userId).get();
     if (!userDoc.exists) {
       return null;
     }
-    
+
     const data = userDoc.data();
     if (!data?.preferences) {
       return null;
     }
-    
+
     return {
       name: data.displayName || data.email?.split("@")[0],
       goal: data.preferences.goal,
@@ -97,14 +97,14 @@ async function getTodayWorkout(userId: string): Promise<WorkoutContext | undefin
   try {
     const workouts = await dataConnectStorage.getWorkouts(userId);
     const today = new Date().getDay(); // 0 = Sunday
-    
+
     const todayWorkout = workouts.find(w => w.dayOfWeek === today && w.isActive);
     if (!todayWorkout) {
       return undefined;
     }
-    
+
     const exercises = await dataConnectStorage.getWorkoutExercises(todayWorkout.id);
-    
+
     return {
       name: todayWorkout.name,
       type: todayWorkout.type,
@@ -129,15 +129,15 @@ async function getRecentWorkouts(userId: string): Promise<RecentWorkout[]> {
     const sessions = await dataConnectStorage.getSessions(userId, 10);
     const sevenDaysAgo = new Date();
     sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7);
-    
+
     return sessions
       .filter(s => s.startedAt >= sevenDaysAgo)
       .map(s => ({
         name: s.workoutName,
-        date: s.startedAt.toLocaleDateString("en-US", { 
-          weekday: "short", 
-          month: "short", 
-          day: "numeric" 
+        date: s.startedAt.toLocaleDateString("en-US", {
+          weekday: "short",
+          month: "short",
+          day: "numeric"
         }),
         completed: s.status === "completed",
       }));
@@ -165,33 +165,52 @@ const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Frid
 /**
  * Get full week schedule with all exercises for each day
  */
+/**
+ * Get week schedule with optimized context window
+ * - Today: Full details (sets, reps, etc.)
+ * - Tomorrow/Yesterday: Summary only
+ * - Others: Minimal summary
+ */
 async function getWeekSchedule(userId: string): Promise<WeeklyWorkout[]> {
   try {
     const workouts = await dataConnectStorage.getWorkouts(userId);
     const activeWorkouts = workouts.filter(w => w.isActive);
-    
+    const today = new Date().getDay();
+
     // Build schedule for all 7 days
     const weekSchedule: WeeklyWorkout[] = [];
-    
+
     for (let day = 0; day < 7; day++) {
       const workout = activeWorkouts.find(w => w.dayOfWeek === day);
-      
+
       if (workout) {
-        // Fetch exercises for this workout
-        const exercises = await dataConnectStorage.getWorkoutExercises(workout.id);
-        
+        // Sliding Window Logic:
+        // Only fetch full exercise details if it is TODAY.
+        // For other days, we just return the workout name and type (Summary).
+
+        let exercisesFormatted: Array<{ id: string; name: string; targetSets: number; targetReps: string; }> = [];
+
+        if (day === today) {
+          // Full Detail for Today
+          const exercises = await dataConnectStorage.getWorkoutExercises(workout.id);
+          exercisesFormatted = exercises.map(e => ({
+            id: e.exerciseId,
+            name: e.exerciseName,
+            targetSets: e.targetSets,
+            targetReps: e.targetReps,
+          }));
+        } else {
+          // Summary for other days (Empty exercises implies summary view in prompt)
+          exercisesFormatted = [];
+        }
+
         weekSchedule.push({
           dayOfWeek: day,
           dayName: DAY_NAMES[day],
           workout: {
             name: workout.name,
             type: workout.type,
-            exercises: exercises.map(e => ({
-              id: e.exerciseId,
-              name: e.exerciseName,
-              targetSets: e.targetSets,
-              targetReps: e.targetReps,
-            })),
+            exercises: exercisesFormatted,
           },
         });
       } else {
@@ -202,7 +221,7 @@ async function getWeekSchedule(userId: string): Promise<WeeklyWorkout[]> {
         });
       }
     }
-    
+
     return weekSchedule;
   } catch (error) {
     console.error("[ai-context] Error fetching week schedule:", error);
@@ -222,12 +241,12 @@ export async function buildCoachContext(userId: string): Promise<CoachContext> {
     getCurrentStreak(userId),
     getWeekSchedule(userId),
   ]);
-  
+
   // Extract today's workout from the week schedule
   const today = new Date().getDay();
   const todayFromSchedule = weekSchedule.find(w => w.dayOfWeek === today);
   const todayWorkout = todayFromSchedule?.workout || undefined;
-  
+
   // Format user context string for the AI
   const userContext = formatUserContext({
     name: profile?.name,
@@ -249,7 +268,7 @@ export async function buildCoachContext(userId: string): Promise<CoachContext> {
       })),
     } : undefined,
   });
-  
+
   return {
     userContext,
     profile: profile || {},
@@ -269,9 +288,9 @@ export async function getWorkoutWithExercises(workoutId: string): Promise<Workou
     if (!workout) {
       return undefined;
     }
-    
+
     const exercises = await dataConnectStorage.getWorkoutExercises(workoutId);
-    
+
     return {
       name: workout.name,
       type: workout.type,

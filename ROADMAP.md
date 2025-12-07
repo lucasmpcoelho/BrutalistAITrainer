@@ -79,7 +79,7 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 - [x] **Notes Sheet Close Button** — Fixed covered close button on Exercise Notes sheet by using a floating button with z-index
 
 ### Known Issues
-1. **Swap exercise not loading alternatives** — SwapExerciseSheet opens but alternatives don't appear. The refactor to pass `exerciseId` and fetch internally may have issues with the API endpoint or data flow.
+1. ~~**Swap exercise not loading alternatives**~~ — FIXED. The refactor to pass `exerciseId` and fetch internally is working correctly.
 3. **Exercise bank gaps for equipment-less users** — When users select "no equipment" during onboarding, the workout generator may not find suitable exercises, resulting in empty workout days. Need to audit exercise database coverage for bodyweight exercises.
 
 ### Not Implemented
@@ -92,9 +92,9 @@ IRON_AI is an AI-powered fitness training platform with a brutalist design aesth
 
 ### Active Work
 - ✅ **Phase 2 Complete** — Firebase Data Connect deployed, workout generation working, training plan management features added.
-- 🔧 **Phase 2.9 In Progress** — ~~Race condition~~ FIXED! Swap/Notes UI fixed. Remaining: swap exercise alternatives logic, exercise coverage.
-- 🔜 **Next: Phase 2.10 (Active Session Video Redesign)** — AI-generated exercise videos, immersive session UI, enhanced notes.
-- 🔜 **Future: Phase 3 (Gamification)** — Achievement system, PRs, streaks, progress visualization.
+- ✅ **Phase 2.9 Complete** — Race condition fixed. Swap/Notes UI fixed. Swap exercise alternatives logic fixed.
+- 🔜 **Next: Phase 2.10 (UI & AI Polish)** — Enhanced brutalist aesthetics, smarter AI coach, improved chat UI.
+- 🔮 **Future: Active Session Video Redesign** — AI-generated exercise videos (postponed).
 
 ---
 
@@ -537,12 +537,12 @@ exercises/{exerciseId}
 | P2.9-02 | [x] | Add 3-second animated completion screen with status messages | `client/src/pages/Onboarding.tsx` |
 | P2.9-03 | [x] | Defer `refetchProfile()` to button click to prevent premature navigation | `client/src/pages/Onboarding.tsx` |
 
-### 2.9.2 Swap Exercise Alternatives Not Loading
+### 2.9.2 Swap Exercise Alternatives Not Loading — ✅ FIXED
 | ID | Status | Task | Files |
 |----|--------|------|-------|
-| P2.9-04 | [ ] | Debug useExercise hook data flow in SwapExerciseSheet | `client/src/components/SwapExerciseSheet.tsx` |
-| P2.9-05 | [ ] | Verify GET /api/exercises/:id/alternatives returns data | `server/routes/exercises.ts` |
-| P2.9-06 | [ ] | Add console logging to trace exerciseId through component lifecycle | `client/src/components/SwapExerciseSheet.tsx` |
+| P2.9-04 | [x] | Debug useExercise hook data flow in SwapExerciseSheet | `client/src/components/SwapExerciseSheet.tsx` |
+| P2.9-05 | [x] | Verify GET /api/exercises/:id/alternatives returns data | `server/routes/exercises.ts` |
+| P2.9-06 | [x] | Add console logging to trace exerciseId through component lifecycle | `client/src/components/SwapExerciseSheet.tsx` |
 
 ### 2.9.3 Exercise Database Coverage
 | ID | Status | Task | Files |
@@ -559,9 +559,9 @@ exercises/{exerciseId}
 
 ---
 
-## Phase 2.10: Active Session Video Redesign
+## Phase 2.10: UI & AI Agent Enhancements
 
-*Goal: Redesign the Active Session screen with AI-generated exercise demonstration videos for immersive workout guidance*
+*Goal: Polish the brutalist aesthetic and make the AI Coach smarter and more helpful*
 
 ### 2.10.1 Exercise Video Infrastructure
 | ID | Status | Task | Files |

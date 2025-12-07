@@ -148,6 +148,29 @@ const getAlternativesTool: FunctionDeclaration = {
   },
 };
 
+/**
+ * Tool: search_exercises
+ * Finds exercises in the database based on a search query
+ */
+const searchExercisesTool: FunctionDeclaration = {
+  name: "search_exercises",
+  description: "Search for exercises by name or body part. Use this when you need to find an exercise but don't know the exact name, or when looking for options to present to the user.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      query: {
+        type: SchemaType.STRING,
+        description: "The search query (e.g., 'chest press', 'dumbbell legs', 'back isolation')",
+      },
+      limit: {
+        type: SchemaType.NUMBER,
+        description: "Maximum results to return (default: 5)",
+      },
+    },
+    required: ["query"],
+  },
+};
+
 // Export all tool declarations for Gemini
 export const COACH_TOOLS: Tool = {
   functionDeclarations: [
@@ -155,6 +178,7 @@ export const COACH_TOOLS: Tool = {
     adjustVolumeTool,
     explainExerciseTool,
     getAlternativesTool,
+    searchExercisesTool,
   ],
 };
 
@@ -167,21 +191,21 @@ export const COACH_TOOLS: Tool = {
  */
 async function findExerciseByName(name: string): Promise<FirestoreExercise | null> {
   if (!db) return null;
-  
+
   // Try exact match first (case-insensitive via lowercase ID convention)
   const normalizedId = name.replace(/[^a-zA-Z0-9]/g, "_");
   const exactDoc = await db.collection("exercises").doc(normalizedId).get();
   if (exactDoc.exists) {
     return exactDoc.data() as FirestoreExercise;
   }
-  
+
   // Fall back to search by name field
   const snapshot = await db.collection("exercises")
     .where("name", ">=", name)
     .where("name", "<=", name + "\uf8ff")
     .limit(5)
     .get();
-  
+
   if (!snapshot.empty) {
     // Find best match (case-insensitive)
     const nameLower = name.toLowerCase();
@@ -194,7 +218,7 @@ async function findExerciseByName(name: string): Promise<FirestoreExercise | nul
     // Return first result if no exact match
     return snapshot.docs[0].data() as FirestoreExercise;
   }
-  
+
   return null;
 }
 
@@ -210,26 +234,26 @@ async function findWorkoutExercise(
     // Get all workouts for the user
     const workouts = await dataConnectStorage.getWorkouts(userId);
     const workout = workouts.find(w => w.dayOfWeek === dayOfWeek && w.isActive);
-    
+
     if (!workout) {
       return null;
     }
-    
+
     // Get exercises for this workout
     const exercises = await dataConnectStorage.getWorkoutExercises(workout.id);
-    
+
     // Find the exercise by name (case-insensitive)
     const nameLower = exerciseName.toLowerCase();
-    const exercise = exercises.find(e => 
+    const exercise = exercises.find(e =>
       e.exerciseName.toLowerCase() === nameLower ||
       e.exerciseName.toLowerCase().includes(nameLower) ||
       nameLower.includes(e.exerciseName.toLowerCase())
     );
-    
+
     if (!exercise) {
       return null;
     }
-    
+
     return {
       workoutExerciseId: exercise.id,
       exerciseId: exercise.exerciseId,
@@ -267,7 +291,7 @@ async function executeSwapExercise(args: {
     if (!currentUserId) {
       return { success: false, message: "User context not available" };
     }
-    
+
     // Parse day of week
     let dayNum: number;
     if (args.dayOfWeek.toLowerCase() === "today") {
@@ -279,31 +303,31 @@ async function executeSwapExercise(args: {
       }
       dayNum = parsed;
     }
-    
+
     // Find the current exercise in the user's workout
     const currentExercise = await findWorkoutExercise(currentUserId, args.currentExerciseName, dayNum);
     if (!currentExercise) {
-      return { 
-        success: false, 
-        message: `Could not find "${args.currentExerciseName}" in the workout for ${args.dayOfWeek}. Check the exercise name matches exactly.` 
+      return {
+        success: false,
+        message: `Could not find "${args.currentExerciseName}" in the workout for ${args.dayOfWeek}. Check the exercise name matches exactly.`
       };
     }
-    
+
     // Find the new exercise in the database
     const newExercise = await findExerciseByName(args.newExerciseName);
     if (!newExercise) {
-      return { 
-        success: false, 
-        message: `Could not find "${args.newExerciseName}" in the exercise database. Try a different exercise name.` 
+      return {
+        success: false,
+        message: `Could not find "${args.newExerciseName}" in the exercise database. Try a different exercise name.`
       };
     }
-    
+
     // Execute the swap
     await dataConnectStorage.updateWorkoutExercise(currentExercise.workoutExerciseId, {
       exerciseId: newExercise.id,
       exerciseName: newExercise.name,
     });
-    
+
     return {
       success: true,
       message: `Swapped "${args.currentExerciseName}" for "${newExercise.name}" on ${args.dayOfWeek}${args.reason ? `. Reason: ${args.reason}` : ""}`,
@@ -337,7 +361,7 @@ async function executeAdjustVolume(args: {
     if (!currentUserId) {
       return { success: false, message: "User context not available" };
     }
-    
+
     // Parse day of week
     let dayNum: number;
     if (args.dayOfWeek.toLowerCase() === "today") {
@@ -349,36 +373,36 @@ async function executeAdjustVolume(args: {
       }
       dayNum = parsed;
     }
-    
+
     // Find the exercise in the user's workout
     const exercise = await findWorkoutExercise(currentUserId, args.exerciseName, dayNum);
     if (!exercise) {
-      return { 
-        success: false, 
-        message: `Could not find "${args.exerciseName}" in the workout for ${args.dayOfWeek}` 
+      return {
+        success: false,
+        message: `Could not find "${args.exerciseName}" in the workout for ${args.dayOfWeek}`
       };
     }
-    
+
     // Build updates
     const updates: Record<string, unknown> = {};
     if (args.targetSets !== undefined) updates.targetSets = args.targetSets;
     if (args.targetReps !== undefined) updates.targetReps = args.targetReps;
     if (args.restSeconds !== undefined) updates.restSeconds = args.restSeconds;
-    
+
     if (Object.keys(updates).length === 0) {
       return {
         success: false,
         message: "No volume changes specified. Provide targetSets, targetReps, or restSeconds.",
       };
     }
-    
+
     await dataConnectStorage.updateWorkoutExercise(exercise.workoutExerciseId, updates);
-    
+
     const changes: string[] = [];
     if (args.targetSets) changes.push(`${args.targetSets} sets`);
     if (args.targetReps) changes.push(`${args.targetReps} reps`);
     if (args.restSeconds) changes.push(`${args.restSeconds}s rest`);
-    
+
     return {
       success: true,
       message: `Updated ${args.exerciseName} on ${args.dayOfWeek}: ${changes.join(", ")}${args.reason ? `. ${args.reason}` : ""}`,
@@ -401,14 +425,14 @@ async function executeExplainExercise(args: {
 }): Promise<ToolResult> {
   try {
     const exercise = await findExerciseByName(args.exerciseName);
-    
+
     if (!exercise) {
       return {
         success: false,
         message: `Could not find exercise "${args.exerciseName}" in the database`,
       };
     }
-    
+
     return {
       success: true,
       message: "Exercise details retrieved",
@@ -443,21 +467,21 @@ async function executeGetAlternatives(args: {
     if (!db) {
       return { success: false, message: "Database not available" };
     }
-    
+
     // Find the original exercise
     const exercise = await findExerciseByName(args.exerciseName);
     if (!exercise) {
       return { success: false, message: `Could not find exercise "${args.exerciseName}"` };
     }
-    
+
     const limitNum = args.limit || 5;
-    
+
     // Find alternatives with same target muscle
     const snapshot = await db.collection("exercises")
       .where("target", "==", exercise.target)
       .limit(limitNum + 5)
       .get();
-    
+
     const alternatives = snapshot.docs
       .map(d => d.data() as FirestoreExercise)
       .filter(ex => ex.id !== exercise.id)
@@ -467,7 +491,7 @@ async function executeGetAlternatives(args: {
         equipment: ex.equipment,
         bodyPart: ex.bodyPart,
       }));
-    
+
     return {
       success: true,
       message: `Found ${alternatives.length} alternatives for ${exercise.name} (targets: ${exercise.target})`,
@@ -482,6 +506,95 @@ async function executeGetAlternatives(args: {
     return {
       success: false,
       message: `Failed to get alternatives: ${error}`,
+    };
+  }
+}
+
+/**
+ * Execute search_exercises tool
+ */
+async function executeSearchExercises(args: {
+  query: string;
+  limit?: number;
+}): Promise<ToolResult> {
+  try {
+    if (!db) {
+      return { success: false, message: "Database not available" };
+    }
+
+    const limitNum = args.limit || 5;
+    const queryLower = args.query.toLowerCase();
+
+    // 1. Try body part match first
+    const bodyParts = ["chest", "back", "shoulders", "arms", "legs", "core", "cardio"];
+    const matchedBodyPart = bodyParts.find(bp => queryLower.includes(bp));
+
+    let queryFn = db.collection("exercises");
+    let initialQuery: FirebaseFirestore.Query<FirebaseFirestore.DocumentData> | FirebaseFirestore.CollectionReference<FirebaseFirestore.DocumentData> = queryFn;
+
+    if (matchedBodyPart) {
+      initialQuery = queryFn.where("bodyPart", "==", matchedBodyPart);
+    }
+
+    // Fetch more to filter in memory
+    const snapshot = await initialQuery.limit(50).get();
+
+    // 2. Filter by text match in memory (Firestore doesn't do substring search)
+    let results = snapshot.docs
+      .map(d => d.data() as FirestoreExercise)
+      .filter(ex => {
+        // If we matched body part, we already filtered by it.
+        // If query was just "chest", we return all chest exercises.
+        // If query was "dumbbell chest", we filter by "dumbbell" too.
+        if (matchedBodyPart && queryLower === matchedBodyPart) return true;
+
+        const searchTerms = queryLower.split(" ");
+        return searchTerms.every(term =>
+          ex.name.toLowerCase().includes(term) ||
+          ex.equipment.toLowerCase().includes(term) ||
+          ex.target.toLowerCase().includes(term) ||
+          ex.bodyPart.toLowerCase().includes(term)
+        );
+      });
+
+    // 3. Sort by relevance (exact matches first)
+    results.sort((a, b) => {
+      const aName = a.name.toLowerCase();
+      const bName = b.name.toLowerCase();
+      const aExact = aName === queryLower ? 1 : 0;
+      const bExact = bName === queryLower ? 1 : 0;
+      return bExact - aExact;
+    });
+
+    // 4. Limit results
+    results = results.slice(0, limitNum);
+
+    if (results.length === 0) {
+      return {
+        success: true, // Not an error, just no results
+        message: `No exercises found matching "${args.query}". Try a different term.`,
+        data: { results: [] }
+      };
+    }
+
+    return {
+      success: true,
+      message: `Found ${results.length} exercises matching "${args.query}"`,
+      data: {
+        results: results.map(ex => ({
+          name: ex.name,
+          equipment: ex.equipment,
+          bodyPart: ex.bodyPart,
+          target: ex.target
+        }))
+      }
+    };
+
+  } catch (error) {
+    console.error("[ai-tools] search_exercises error:", error);
+    return {
+      success: false,
+      message: `Search failed: ${error}`,
     };
   }
 }
@@ -502,24 +615,27 @@ export async function executeTool(
   userId?: string
 ): Promise<ToolResult> {
   console.log(`[ai-tools] Executing tool: ${toolName}`, args);
-  
+
   // Set user context for tools that need it
   currentUserId = userId || null;
-  
+
   try {
     switch (toolName) {
       case "swap_exercise":
         return await executeSwapExercise(args as Parameters<typeof executeSwapExercise>[0]);
-      
+
       case "adjust_volume":
         return await executeAdjustVolume(args as Parameters<typeof executeAdjustVolume>[0]);
-      
+
       case "explain_exercise":
         return await executeExplainExercise(args as Parameters<typeof executeExplainExercise>[0]);
-      
+
       case "get_alternatives":
         return await executeGetAlternatives(args as Parameters<typeof executeGetAlternatives>[0]);
-      
+
+      case "search_exercises":
+        return await executeSearchExercises(args as Parameters<typeof executeSearchExercises>[0]);
+
       default:
         return {
           success: false,

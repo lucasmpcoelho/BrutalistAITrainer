@@ -3,6 +3,7 @@
  * 
  * Generates personalized workout programs based on user preferences.
  * Selects exercises from Firestore based on equipment, experience, and goals.
+ * Implements "Focus Tracks" (Strength, Hypertrophy, Endurance) for specialized programming.
  */
 
 import { db } from "../config/firebase";
@@ -13,7 +14,7 @@ import type { FirestoreExercise } from "../../shared/types/exercise";
 // ============================================================================
 
 export interface UserPreferences {
-  goal?: string;           // "hypertrophy", "strength", "fat_loss", "general"
+  goal?: string;           // "hypertrophy", "strength", "fat_loss", "general", "endurance"
   frequency?: number;      // 3, 4, 5, or 6 days per week
   equipment?: string;      // "full_gym", "home_gym", "bodyweight"
   experience?: string;     // "beginner", "intermediate", "advanced"
@@ -29,6 +30,7 @@ export interface GeneratedExercise {
   targetRpe: number | null;
   restSeconds: number;
   orderIndex: number;
+  notes?: string;
 }
 
 export interface GeneratedWorkout {
@@ -49,77 +51,77 @@ interface WorkoutTemplate {
   type: string;
   targetMuscles: string[];
   primaryBodyParts: string[];
-  exerciseCount: { beginner: number; intermediate: number; advanced: number };
+  baseExerciseCount: number; // Scaled dynamically later
 }
 
-// Push/Pull/Legs split
+// Push/Pull/Legs split (Default for 3, 5, 6 days)
 const PPL_TEMPLATES: WorkoutTemplate[] = [
   {
     name: "PUSH",
     type: "push",
     targetMuscles: ["chest", "shoulders", "triceps"],
     primaryBodyParts: ["chest", "shoulders", "upper arms"],
-    exerciseCount: { beginner: 4, intermediate: 5, advanced: 6 },
+    baseExerciseCount: 5,
   },
   {
-    name: "PULL", 
+    name: "PULL",
     type: "pull",
     targetMuscles: ["back", "biceps", "rear delts"],
     primaryBodyParts: ["back", "upper arms"],
-    exerciseCount: { beginner: 4, intermediate: 5, advanced: 6 },
+    baseExerciseCount: 5,
   },
   {
     name: "LEGS",
     type: "legs",
     targetMuscles: ["quads", "hamstrings", "glutes", "calves"],
     primaryBodyParts: ["upper legs", "lower legs"],
-    exerciseCount: { beginner: 4, intermediate: 5, advanced: 6 },
+    baseExerciseCount: 5,
   },
 ];
 
-// Upper/Lower split
+// Upper/Lower split (Default for 4 days)
 const UPPER_LOWER_TEMPLATES: WorkoutTemplate[] = [
   {
     name: "UPPER A",
     type: "upper",
     targetMuscles: ["chest", "back", "shoulders", "arms"],
     primaryBodyParts: ["chest", "back", "shoulders", "upper arms"],
-    exerciseCount: { beginner: 5, intermediate: 6, advanced: 7 },
+    baseExerciseCount: 6,
   },
   {
     name: "LOWER A",
     type: "lower",
     targetMuscles: ["quads", "hamstrings", "glutes", "calves"],
     primaryBodyParts: ["upper legs", "lower legs"],
-    exerciseCount: { beginner: 4, intermediate: 5, advanced: 6 },
+    baseExerciseCount: 5,
   },
   {
     name: "UPPER B",
     type: "upper",
     targetMuscles: ["chest", "back", "shoulders", "arms"],
     primaryBodyParts: ["chest", "back", "shoulders", "upper arms"],
-    exerciseCount: { beginner: 5, intermediate: 6, advanced: 7 },
+    baseExerciseCount: 6,
   },
   {
     name: "LOWER B",
     type: "lower",
     targetMuscles: ["quads", "hamstrings", "glutes", "calves"],
     primaryBodyParts: ["upper legs", "lower legs"],
-    exerciseCount: { beginner: 4, intermediate: 5, advanced: 6 },
+    baseExerciseCount: 5,
   },
 ];
 
-// Full body (for 3-day beginners or time-constrained)
+// Full body (Alternative for 2-3 days)
 const FULL_BODY_TEMPLATE: WorkoutTemplate = {
   name: "FULL BODY",
   type: "full",
   targetMuscles: ["chest", "back", "shoulders", "legs", "core"],
   primaryBodyParts: ["chest", "back", "shoulders", "upper legs", "waist"],
-  exerciseCount: { beginner: 5, intermediate: 6, advanced: 7 },
+  baseExerciseCount: 6,
 };
 
 // ============================================================================
-// EQUIPMENT MAPPING
+// EQUIPMENT MAPPING & FALLBACKS
 // ============================================================================
 
 // Equipment allowed for each user equipment preference
@@ -131,7 +133,7 @@ const EQUIPMENT_MAP: Record<string, string[]> = {
     "medicine ball", "stability ball", "weighted"
   ],
   home_gym: [
-    "barbell", "dumbbell", "kettlebell", "body weight", 
+    "barbell", "dumbbell", "kettlebell", "body weight",
     "band", "resistance band", "medicine ball", "stability ball",
     "ez barbell", "weighted"
   ],
@@ -140,36 +142,53 @@ const EQUIPMENT_MAP: Record<string, string[]> = {
   ],
 };
 
+// Essential equipment checks for compound movements
+const REQUIRED_EQUIPMENT: Record<string, string[]> = {
+  "barbell squat": ["rack", "barbell"],
+  "bench press": ["bench", "barbell"],
+  "deadlift": ["barbell"],
+};
+
 // ============================================================================
-// REP SCHEMES BY GOAL
+// FOCUS TRACKS (ARCHETYPES)
 // ============================================================================
 
 interface RepScheme {
   compound: { sets: number; reps: string; rpe: number; rest: number };
   isolation: { sets: number; reps: string; rpe: number; rest: number };
+  notes: string;
 }
 
-const REP_SCHEMES: Record<string, RepScheme> = {
+const FOCUS_TRACKS: Record<string, RepScheme> = {
   strength: {
-    compound: { sets: 5, reps: "3-5", rpe: 8, rest: 180 },
-    isolation: { sets: 3, reps: "8-10", rpe: 7, rest: 90 },
+    compound: { sets: 5, reps: "3-5", rpe: 8.5, rest: 180 },
+    isolation: { sets: 3, reps: "6-10", rpe: 8, rest: 120 },
+    notes: "Focus on heavy weight and perfect form. Rest fully.",
   },
   hypertrophy: {
-    compound: { sets: 4, reps: "6-10", rpe: 8, rest: 120 },
-    isolation: { sets: 3, reps: "10-15", rpe: 9, rest: 60 },
+    compound: { sets: 4, reps: "8-12", rpe: 8, rest: 90 },
+    isolation: { sets: 3, reps: "12-15", rpe: 9, rest: 60 },
+    notes: "Focus on time under tension and muscle contraction.",
   },
   fat_loss: {
-    compound: { sets: 3, reps: "10-15", rpe: 7, rest: 60 },
-    isolation: { sets: 3, reps: "12-20", rpe: 8, rest: 45 },
+    compound: { sets: 3, reps: "12-15", rpe: 7.5, rest: 60 },
+    isolation: { sets: 3, reps: "15-20", rpe: 8, rest: 45 },
+    notes: "Keep heart rate up. Short rests.",
+  },
+  endurance: {
+    compound: { sets: 3, reps: "15-20", rpe: 7, rest: 45 },
+    isolation: { sets: 2, reps: "20+", rpe: 8, rest: 30 },
+    notes: "Focus on muscular endurance. Minimize rest.",
   },
   general: {
-    compound: { sets: 3, reps: "8-12", rpe: 7, rest: 90 },
-    isolation: { sets: 3, reps: "10-15", rpe: 8, rest: 60 },
+    compound: { sets: 3, reps: "8-10", rpe: 8, rest: 90 },
+    isolation: { sets: 3, reps: "10-12", rpe: 8, rest: 60 },
+    notes: "Balanced approach for strength and fitness.",
   },
 };
 
 // ============================================================================
-// EXERCISE SELECTION
+// EXERCISE SELECTION LOGIC
 // ============================================================================
 
 async function fetchExercisesFromFirestore(
@@ -183,7 +202,7 @@ async function fetchExercisesFromFirestore(
   }
 
   const exercises: FirestoreExercise[] = [];
-  
+
   // Query exercises for each body part
   for (const bodyPart of bodyParts) {
     try {
@@ -192,17 +211,17 @@ async function fetchExercisesFromFirestore(
         .where("bodyPart", "==", bodyPart)
         .limit(50)
         .get();
-      
+
       snapshot.docs.forEach((doc) => {
         const data = doc.data() as FirestoreExercise;
-        
+
         // Filter by equipment
         if (allowedEquipment.includes(data.equipment.toLowerCase())) {
           // Filter by experience level (allow exercises at or below user's level)
           const levelOrder = { beginner: 1, intermediate: 2, expert: 3 };
           const userLevel = levelOrder[experienceLevel as keyof typeof levelOrder] || 2;
           const exerciseLevel = levelOrder[data.level as keyof typeof levelOrder] || 2;
-          
+
           if (exerciseLevel <= userLevel) {
             exercises.push(data);
           }
@@ -219,20 +238,26 @@ async function fetchExercisesFromFirestore(
 function selectExercisesForWorkout(
   exercises: FirestoreExercise[],
   count: number,
-  goal: string
+  goal: string,
+  experience: string
 ): GeneratedExercise[] {
-  // Prioritize compound movements first
-  const compounds = exercises.filter(e => e.mechanic === "compound");
-  const isolations = exercises.filter(e => e.mechanic === "isolation" || e.mechanic === null);
+  // Categorize
+  const compounds = exercises.filter(e => e.mechanic === "compound" || (e.mechanic === null && e.equipment === "barbell"));
+  const isolations = exercises.filter(e => e.mechanic === "isolation" || (e.mechanic === null && e.equipment !== "barbell"));
 
   const selected: GeneratedExercise[] = [];
   const usedIds = new Set<string>();
-  
-  const scheme = REP_SCHEMES[goal] || REP_SCHEMES.general;
-  
-  // Select 60% compound, 40% isolation (roughly)
-  const compoundCount = Math.ceil(count * 0.6);
-  const isolationCount = count - compoundCount;
+
+  // Get Track (Archetype)
+  const track = FOCUS_TRACKS[goal] || FOCUS_TRACKS.general;
+
+  // Dynamic Volume Adjustment
+  // Beginners: -1 set per exercise
+  // Advanced: +1 set per exercise
+  const setModifier = experience === "beginner" ? -1 : experience === "advanced" ? 1 : 0;
+
+  // Compound/Isolation Split: ~50-60% Compound
+  const compoundCount = Math.ceil(count * 0.55);
 
   // Shuffle arrays for variety
   const shuffledCompounds = shuffleArray([...compounds]);
@@ -242,16 +267,19 @@ function selectExercisesForWorkout(
   for (const exercise of shuffledCompounds) {
     if (selected.length >= compoundCount) break;
     if (usedIds.has(exercise.id)) continue;
-    
+
     usedIds.add(exercise.id);
+    const sets = Math.max(2, track.compound.sets + setModifier);
+
     selected.push({
       exerciseId: exercise.id,
       exerciseName: exercise.name,
-      targetSets: scheme.compound.sets,
-      targetReps: scheme.compound.reps,
-      targetRpe: scheme.compound.rpe,
-      restSeconds: scheme.compound.rest,
+      targetSets: sets,
+      targetReps: track.compound.reps,
+      targetRpe: track.compound.rpe,
+      restSeconds: track.compound.rest,
       orderIndex: selected.length,
+      notes: track.notes,
     });
   }
 
@@ -259,37 +287,40 @@ function selectExercisesForWorkout(
   for (const exercise of shuffledIsolations) {
     if (selected.length >= count) break;
     if (usedIds.has(exercise.id)) continue;
-    
+
     usedIds.add(exercise.id);
+    const sets = Math.max(2, track.isolation.sets + setModifier);
+
     selected.push({
       exerciseId: exercise.id,
       exerciseName: exercise.name,
-      targetSets: scheme.isolation.sets,
-      targetReps: scheme.isolation.reps,
-      targetRpe: scheme.isolation.rpe,
-      restSeconds: scheme.isolation.rest,
+      targetSets: sets,
+      targetReps: track.isolation.reps,
+      targetRpe: track.isolation.rpe,
+      restSeconds: track.isolation.rest,
       orderIndex: selected.length,
     });
   }
 
-  // If we still need more, add from either pool
+  // Backfill if needed
   const remaining = [...shuffledCompounds, ...shuffledIsolations].filter(
     e => !usedIds.has(e.id)
   );
   for (const exercise of remaining) {
     if (selected.length >= count) break;
-    
+
     usedIds.add(exercise.id);
     const isCompound = exercise.mechanic === "compound";
-    const exScheme = isCompound ? scheme.compound : scheme.isolation;
-    
+    const baseScheme = isCompound ? track.compound : track.isolation;
+    const sets = Math.max(2, baseScheme.sets + setModifier);
+
     selected.push({
       exerciseId: exercise.id,
       exerciseName: exercise.name,
-      targetSets: exScheme.sets,
-      targetReps: exScheme.reps,
-      targetRpe: exScheme.rpe,
-      restSeconds: exScheme.rest,
+      targetSets: sets,
+      targetReps: baseScheme.reps,
+      targetRpe: baseScheme.rpe,
+      restSeconds: baseScheme.rest,
       orderIndex: selected.length,
     });
   }
@@ -356,18 +387,28 @@ function getDefaultWorkoutDays(frequency: number): number[] {
 }
 
 function estimateDuration(exercises: GeneratedExercise[]): number {
-  // Estimate: ~4 min per set (including rest) + 5 min warmup
+  // Accurate Estimate: Set time + Rest time + 5min Warmup
   const totalSets = exercises.reduce((sum, ex) => sum + ex.targetSets, 0);
-  return Math.round(totalSets * 4 + 5);
+  const totalRest = exercises.reduce((sum, ex) => sum + (ex.targetSets * ex.restSeconds), 0);
+  const setDurationSeconds = 45; // Approx time under tension per set
+
+  const totalSeconds = (totalSets * setDurationSeconds) + totalRest + (300); // +5 min warmup
+  return Math.round(totalSeconds / 60);
 }
 
-function adjustExerciseCountForSessionLength(
+function calculateTargetExerciseCount(
   baseCount: number,
-  sessionLengthMin: number
+  sessionLengthMin: number,
+  experience: string
 ): number {
-  // Rough estimate: each exercise takes ~8-10 min including all sets and rest
-  const maxExercises = Math.floor((sessionLengthMin - 5) / 8); // 5 min for warmup
-  return Math.min(baseCount, Math.max(3, maxExercises));
+  // Adjust base count by experience
+  const expMod = experience === "beginner" ? -1 : experience === "advanced" ? 1 : 0;
+  let target = baseCount + expMod;
+
+  // Cap based on time constraint
+  // Approx 8-10 mins per exercise
+  const maxExercises = Math.floor((sessionLengthMin - 5) / 8);
+  return Math.min(target, Math.max(3, maxExercises));
 }
 
 // ============================================================================
@@ -386,47 +427,52 @@ export async function generateWorkoutProgram(
     workoutDays,
   } = preferences;
 
-  console.log("[workout-generator] Generating program with preferences:", preferences);
+  console.log("[workout-generator] Generating program with Focus Track:", goal);
 
   // Get workout templates based on frequency
   const templates = getWorkoutTemplates(frequency);
-  
+
   // Get workout days (user-selected or default)
-  const days = workoutDays && workoutDays.length === frequency 
-    ? workoutDays 
+  const days = workoutDays && workoutDays.length === frequency
+    ? workoutDays
     : getDefaultWorkoutDays(frequency);
-  
+
   // Get allowed equipment
   const allowedEquipment = EQUIPMENT_MAP[equipment] || EQUIPMENT_MAP.full_gym;
-  
+
   // Map experience level
-  const experienceLevel = experience === "beginner" ? "beginner" 
-    : experience === "advanced" ? "expert" 
-    : "intermediate";
+  const experienceLevel = experience === "beginner" ? "beginner"
+    : experience === "advanced" ? "expert"
+      : "intermediate";
 
   const generatedWorkouts: GeneratedWorkout[] = [];
 
   for (let i = 0; i < templates.length; i++) {
     const template = templates[i];
     const dayOfWeek = days[i % days.length]; // Cycle through days if more workouts than days
-    
+
     // Fetch exercises from Firestore
     const exercises = await fetchExercisesFromFirestore(
       template.primaryBodyParts,
       allowedEquipment,
       experienceLevel
     );
-    
-    console.log(`[workout-generator] Found ${exercises.length} exercises for ${template.name}`);
 
-    // Determine exercise count based on experience and session length
-    const baseCount = template.exerciseCount[experience as keyof typeof template.exerciseCount] 
-      || template.exerciseCount.intermediate;
-    const exerciseCount = adjustExerciseCountForSessionLength(baseCount, sessionLengthMin);
-    
-    // Select exercises for this workout
-    const selectedExercises = selectExercisesForWorkout(exercises, exerciseCount, goal);
-    
+    // Calculate target exercise count (Dynamic)
+    const exerciseCount = calculateTargetExerciseCount(
+      template.baseExerciseCount,
+      sessionLengthMin,
+      experience
+    );
+
+    // Select exercises for this workout with Focus Track nuances
+    const selectedExercises = selectExercisesForWorkout(
+      exercises,
+      exerciseCount,
+      goal,
+      experience
+    );
+
     generatedWorkouts.push({
       name: template.name,
       type: template.type,
@@ -438,14 +484,10 @@ export async function generateWorkoutProgram(
   }
 
   console.log(`[workout-generator] Generated ${generatedWorkouts.length} workouts`);
-  
+
   return generatedWorkouts;
 }
 
 export default {
   generateWorkoutProgram,
 };
-
-
-
-

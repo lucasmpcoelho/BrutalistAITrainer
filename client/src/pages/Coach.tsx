@@ -1,20 +1,25 @@
 import { useState, useRef, useEffect } from "react";
-import { 
-  Bot, 
-  Send, 
-  Sliders, 
-  HelpCircle, 
-  RefreshCw, 
+import {
+  Bot,
+  Send,
+  Sliders,
+  HelpCircle,
+  RefreshCw,
   TrendingUp,
   MessageSquare,
   ChevronLeft,
   Sparkles,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Trash2
 } from "lucide-react";
+import { useQueryClient } from "@tanstack/react-query";
 import AppHeader from "@/components/AppHeader";
+import CoachMascot from "@/components/CoachMascot";
 import { useHaptics } from "@/hooks/use-haptics";
-import { useSendMessage, useProactiveInsight, type ChatMessage, type ToolCall } from "@/hooks/use-coach";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSendMessage, useProactiveInsight } from "@/hooks/use-coach";
+import { usePersistentChat, type LocalMessage } from "@/hooks/use-persistent-chat";
 
 // Quick action definitions
 const QUICK_ACTIONS = [
@@ -36,47 +41,31 @@ const QUICK_ACTION_PROMPTS: Record<string, string> = {
   why: "Why is this specific workout programmed for today? Explain the reasoning.",
 };
 
-type LocalMessage = {
-  id: number;
-  text: string;
-  sender: "ai" | "user";
-  timestamp: Date;
-  toolCalls?: ToolCall[];
-  isError?: boolean;
-};
-
-// Typing indicator component
-function TypingIndicator() {
-  return (
-    <div className="flex items-start animate-in fade-in duration-200">
-      <div className="bg-gray-100 border border-gray-200 p-4 max-w-[80%] rounded-2xl rounded-tl-none">
-        <div className="flex gap-1.5">
-          <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:0ms]" />
-          <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:150ms]" />
-          <span className="w-2 h-2 bg-black rounded-full animate-bounce [animation-delay:300ms]" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
 export default function Coach() {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [messages, setMessages] = useState<LocalMessage[]>([]);
+  const { messages, setMessages, clearChat } = usePersistentChat();
   const [inputValue, setInputValue] = useState("");
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [insightDismissed, setInsightDismissed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { vibrate } = useHaptics();
+  const queryClient = useQueryClient();
+  const { firebaseUser } = useAuth();
+  const userId = firebaseUser?.uid ?? null;
 
   // API hooks
   const sendMessage = useSendMessage();
   const { data: insightData, isLoading: insightLoading, error: insightError } = useProactiveInsight();
 
-  // Scroll to bottom when messages change
+  // Scroll to bottom when messages change or view expands
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, sendMessage.isPending]);
+    if (isExpanded) {
+      // Small timeout to ensure DOM is ready and layout is calculated
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [messages, sendMessage.isPending, isExpanded]);
 
   const handleSendMessage = async (text: string) => {
     if (!text.trim()) return;
@@ -113,12 +102,27 @@ export default function Coach() {
         toolCalls: response.toolCalls,
       };
       setMessages((prev) => [...prev, aiMessage]);
+
+      // Check if we need to invalidate cache (if AI made changes)
+      if (response.toolCalls && response.toolCalls.length > 0) {
+        const hasWriteAction = response.toolCalls.some(tc =>
+          ["swap_exercise", "adjust_volume"].includes(tc.name)
+        );
+
+        if (hasWriteAction && userId) {
+          console.log("[Coach] Invalidate workout queries due to AI action");
+          // Match the keys used in use-workouts.ts and use-sessions.ts
+          await queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+          await queryClient.invalidateQueries({ queryKey: ["sessions", userId] });
+        }
+      }
+
     } catch (error) {
       // Add error message
       const errorMessage: LocalMessage = {
         id: Date.now() + 1,
-        text: error instanceof Error 
-          ? error.message 
+        text: error instanceof Error
+          ? error.message
           : "Failed to get a response. Please try again.",
         sender: "ai",
         timestamp: new Date(),
@@ -132,7 +136,7 @@ export default function Coach() {
     vibrate("light");
     const prompt = QUICK_ACTION_PROMPTS[actionId] || "Help me with my training.";
     setIsExpanded(true);
-    
+
     // Small delay to ensure UI expands before sending
     setTimeout(() => {
       handleSendMessage(prompt);
@@ -142,7 +146,7 @@ export default function Coach() {
   const handleInsightAction = async (action: string) => {
     vibrate("medium");
     setInsightDismissed(true);
-    
+
     if (action === "Yes, Adjust" && insightData?.insight) {
       setIsExpanded(true);
       setTimeout(() => {
@@ -163,7 +167,7 @@ export default function Coach() {
       <div className="min-h-screen bg-background flex flex-col">
         {/* Chat header */}
         <header className="bg-black text-white p-4 flex items-center gap-3 sticky top-0 z-50 border-b-2 border-white">
-          <button 
+          <button
             onClick={() => {
               vibrate("light");
               setIsExpanded(false);
@@ -172,38 +176,54 @@ export default function Coach() {
           >
             <ChevronLeft className="w-6 h-6" />
           </button>
-          <div className="w-10 h-10 bg-accent flex items-center justify-center flex-shrink-0">
-            <Bot className="w-5 h-5 text-black" />
+          <div className="w-10 h-10 flex items-center justify-center flex-shrink-0">
+            <CoachMascot
+              state={sendMessage.isPending ? "thinking" : "idle"}
+              size="sm"
+              className="shadow-sm border border-white/20"
+            />
           </div>
-          <div className="min-w-0">
+          <div className="min-w-0 flex-1">
             <div className="font-display font-bold text-xl tracking-tighter">IRON_AI COACH</div>
             <div className="text-xs text-gray-400">
               {sendMessage.isPending ? "Thinking..." : "Always online"}
             </div>
           </div>
+          <button
+            onClick={() => {
+              if (confirm("Clear chat history?")) {
+                clearChat();
+                vibrate("medium");
+              }
+            }}
+            className="w-10 h-10 flex items-center justify-center hover:bg-white/10 touch-manipulation"
+          >
+            <Trash2 className="w-5 h-5 text-gray-400 hover:text-white" />
+          </button>
         </header>
 
         {/* Chat messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-[calc(5rem+env(safe-area-inset-bottom)+4rem)]">
           {messages.length === 0 && (
             <div className="text-center text-gray-500 py-8">
-              <Bot className="w-12 h-12 mx-auto mb-4 opacity-50" />
+              <div className="flex justify-center mb-6">
+                <CoachMascot state="idle" size="lg" />
+              </div>
               <p className="text-sm">Start a conversation with your AI coach</p>
             </div>
           )}
-          
+
           {messages.map((msg) => (
-            <div 
-              key={msg.id} 
+            <div
+              key={msg.id}
               className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"} animate-in fade-in slide-in-from-bottom-2 duration-200`}
             >
-              <div className={`max-w-[80%] p-4 border rounded-2xl ${
-                msg.sender === "ai" 
-                  ? msg.isError
-                    ? "border-red-200 bg-red-50 text-red-800 rounded-tl-none"
-                    : "border-gray-200 bg-gray-50 text-gray-800 rounded-tl-none" 
-                  : "border-black bg-black text-white rounded-tr-none"
-              }`}>
+              <div className={`max-w-[80%] p-4 border rounded-2xl ${msg.sender === "ai"
+                ? msg.isError
+                  ? "border-red-200 bg-red-50 text-red-800 rounded-tl-none"
+                  : "border-gray-200 bg-gray-50 text-gray-800 rounded-tl-none"
+                : "border-black bg-black text-white rounded-tr-none"
+                }`}>
                 {msg.isError && (
                   <div className="flex items-center gap-2 mb-2 text-red-600">
                     <AlertCircle className="w-4 h-4" />
@@ -211,7 +231,7 @@ export default function Coach() {
                   </div>
                 )}
                 <p className="whitespace-pre-line text-sm leading-relaxed">{msg.text}</p>
-                
+
                 {/* Show tool calls if any */}
                 {msg.toolCalls && msg.toolCalls.length > 0 && (
                   <div className="mt-3 pt-3 border-t border-gray-200">
@@ -226,21 +246,19 @@ export default function Coach() {
                     ))}
                   </div>
                 )}
-                
+
                 <span className={`text-[10px] opacity-50 mt-2 block ${msg.sender === "user" ? "text-gray-400" : "text-gray-500"}`}>
                   {msg.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                 </span>
               </div>
             </div>
           ))}
-          
-          {sendMessage.isPending && <TypingIndicator />}
-          
+
           <div ref={messagesEndRef} />
         </div>
 
         {/* Chat input */}
-        <div 
+        <div
           className="fixed inset-x-0 bg-white border-t border-gray-200 p-4"
           style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
         >
@@ -280,17 +298,16 @@ export default function Coach() {
       <AppHeader title="COACH" />
 
       <main className="flex-1 p-4 space-y-6">
-        
+
         {/* Proactive AI Insight Card */}
         {!insightDismissed && (
           <div className="border border-gray-200 bg-white p-5 rounded-xl shadow-sm animate-in fade-in slide-in-from-top-4 duration-300">
             <div className="flex items-start gap-3 mb-4">
-              <div className="w-10 h-10 bg-accent/10 rounded-full flex items-center justify-center flex-shrink-0">
-                {insightLoading ? (
-                  <Loader2 className="w-6 h-6 text-gray-400 animate-spin" />
-                ) : (
-                  <Bot className="w-6 h-6 text-black" />
-                )}
+              <div className="flex-shrink-0">
+                <CoachMascot
+                  state={insightLoading ? "thinking" : "idle"}
+                  size="sm"
+                />
               </div>
               <div className="flex-1">
                 <div className="text-[10px] font-bold uppercase text-gray-500 mb-1">
@@ -312,7 +329,7 @@ export default function Coach() {
                 )}
               </div>
             </div>
-            
+
             {!insightLoading && !insightError && insightData?.insight && (
               <div className="flex gap-2">
                 <button
@@ -389,7 +406,7 @@ export default function Coach() {
       </main>
 
       {/* Persistent chat input (collapsed) */}
-      <div 
+      <div
         className="fixed inset-x-0 bg-white border-t border-gray-200 p-4"
         style={{ bottom: 'calc(4rem + env(safe-area-inset-bottom))' }}
       >
