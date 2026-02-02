@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useLocation, useSearch } from "wouter";
 import { 
   Check, 
@@ -7,7 +7,9 @@ import {
   Minus,
   BookOpen,
   Loader2,
-  AlertCircle
+  AlertCircle,
+  Lightbulb,
+  X
 } from "lucide-react";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise } from "@/hooks/use-exercise";
@@ -61,6 +63,10 @@ export default function ActiveSession() {
   const [weightInput, setWeightInput] = useState("");
   const [repsInput, setRepsInput] = useState("");
   const [notesOpen, setNotesOpen] = useState(false);
+  
+  // Form cue state
+  const [showFormCue, setShowFormCue] = useState(false);
+  const formCueTimerRef = useRef<NodeJS.Timeout | null>(null);
   
   const { vibrate } = useHaptics();
 
@@ -147,6 +153,31 @@ export default function ActiveSession() {
     }
     return () => clearInterval(interval);
   }, [isResting, restTimer]);
+
+  // Show form cue when rest ends
+  useEffect(() => {
+    // When rest ends (isResting goes from true to false)
+    if (!isResting && exerciseData) {
+      // Clear any existing timer
+      if (formCueTimerRef.current) {
+        clearTimeout(formCueTimerRef.current);
+      }
+      
+      // Show the form cue
+      setShowFormCue(true);
+      
+      // Auto-hide after 4 seconds
+      formCueTimerRef.current = setTimeout(() => {
+        setShowFormCue(false);
+      }, 4000);
+    }
+    
+    return () => {
+      if (formCueTimerRef.current) {
+        clearTimeout(formCueTimerRef.current);
+      }
+    };
+  }, [isResting, exerciseData]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -271,6 +302,17 @@ export default function ActiveSession() {
     vibrate("light");
     setNotesOpen(true);
   };
+
+  const dismissFormCue = () => {
+    vibrate("light");
+    setShowFormCue(false);
+    if (formCueTimerRef.current) {
+      clearTimeout(formCueTimerRef.current);
+    }
+  };
+
+  // Get the form cue to display (keyCue or first instruction)
+  const formCue = exerciseData?.keyCue || exerciseData?.instructions?.[0] || null;
 
   // Loading state
   if (isWorkoutLoading || isInitializing) {
@@ -480,6 +522,34 @@ export default function ActiveSession() {
           </div>
 
         </div>
+
+        {/* Form Cue Overlay - Shows after rest ends */}
+        {showFormCue && formCue && !isResting && (
+          <div 
+            className="absolute top-20 left-4 right-4 z-40 animate-in fade-in slide-in-from-top-4 duration-300"
+            onClick={dismissFormCue}
+          >
+            <div className="bg-accent/95 backdrop-blur-sm rounded-xl p-4 shadow-lg border border-accent flex items-start gap-3 cursor-pointer">
+              <div className="bg-black/10 rounded-lg p-2 flex-shrink-0">
+                <Lightbulb className="w-5 h-5 text-black" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <div className="text-[10px] font-bold uppercase tracking-wider text-black/60 mb-1">
+                  Form Cue
+                </div>
+                <p className="text-sm font-medium text-black leading-snug">
+                  {formCue}
+                </p>
+              </div>
+              <button 
+                onClick={dismissFormCue}
+                className="text-black/40 hover:text-black/70 transition-colors flex-shrink-0"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Rest Timer Overlay */}
         {isResting && (

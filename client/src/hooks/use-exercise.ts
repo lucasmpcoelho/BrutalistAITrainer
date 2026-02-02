@@ -21,6 +21,8 @@ export interface Exercise {
   level?: "beginner" | "intermediate" | "expert";
   force?: "push" | "pull" | "static" | null;
   mechanic?: "compound" | "isolation" | null;
+  /** Key form cue to show during workout (falls back to instructions[0]) */
+  keyCue?: string;
 }
 
 interface UseExerciseOptions {

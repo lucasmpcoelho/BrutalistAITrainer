@@ -56,6 +56,9 @@ export interface FirestoreExercise {
   
   /** Optional: Mechanic type from free-exercise-db */
   mechanic?: "compound" | "isolation" | null;
+  
+  /** Optional: Key form cue to show during workout (falls back to instructions[0]) */
+  keyCue?: string;
 }
 
 /**
@@ -71,6 +74,8 @@ export interface Exercise {
   instructions: string[];
   gifUrl: string;
   source: string;
+  /** Key form cue to show during workout */
+  keyCue?: string;
 }
 
 /**
