@@ -16,48 +16,26 @@ O app deve funcionar como um PT real:
 
 ## 🔥 Prioridade Alta
 
-### [ ] Adaptação dinâmica de treino via linguagem natural
-**Problema:** Sistema é determinístico demais. Usuário faz onboarding uma vez e fica preso àquele contexto. Vida real muda:
-- Viajando com equipamento limitado
-- Mudou de academia
-- Quer focar em músculo específico
-- Lesão temporária
+### [x] Adaptação dinâmica de treino via linguagem natural ✅
+**Implementado em:** 2025-02-02
 
-**Solução:**
+**Backend:**
+- Nova tool `regenerate_program` no ai-tools.ts
+- Função `regenerateProgramWithConstraints` no workout-generator.ts
+- Suporta: temporaryEquipment, focusMuscles, excludeMuscles
+- Mudanças temporárias arquivam programa original pra restore
+- Prompt do Coach atualizado pra detectar mudanças de contexto
+- Commit: c163c56
 
-**1. Nova tool `regenerate_program` pro AI Coach:**
-```typescript
-regenerate_program({
-  temporaryEquipment: ["dumbbell", "bench"],  // override
-  focusMuscles: ["chest", "triceps"],         // priorizar
-  excludeMuscles: ["shoulders"],               // injury/skip
-  duration: "2_weeks" | "permanent",
-  notes: "Viajando, hotel gym"
-})
-```
-
-**2. Atualizar prompt do Coach:**
-- Detectar mudanças de contexto (viagem, lesão, foco)
-- Perguntar detalhes relevantes
-- Chamar `regenerate_program` automaticamente
-
-**3. UX: Quick-access "Algo mudou?" no Dashboard:**
-```
-"Algo mudou? Me conta:"
-- 🏨 Tô viajando (equipamento limitado)
-- 🎯 Quero focar em [músculo]  
-- 🤕 Tô com dor em [área]
-- 🔄 Voltei ao normal
-```
-Abre chat com Coach pré-preenchido pra facilitar.
-
-**Exemplos de uso:**
-- "Tô no hotel, só tem halteres até 20kg e banco" → regenera programa pra 2 semanas
-- "Quero focar em peito no próximo mês" → ajusta split pra mais volume de chest
-- "Machuquei o ombro" → remove exercícios de ombro, sugere alternativas
-
-**Impacto:** Muito alto — transforma app estático em PT adaptável
-**Esforço:** Médio-Alto (3-4 dias)
+**Frontend:**
+- Novo componente `ContextChangePrompts.tsx`
+- Card "Algo mudou?" no Dashboard com 4 botões:
+  - 🏨 Tô viajando
+  - 🎯 Quero focar em...
+  - 🤕 Tô com dor
+  - 🔄 Voltei ao normal
+- Navega pro Coach com mensagem pré-preenchida
+- Commit: (sub-agent)
 
 ---
 
