@@ -47,6 +47,7 @@ export default function Coach() {
   const [inputValue, setInputValue] = useState("");
   const [conversationId, setConversationId] = useState<string | undefined>();
   const [insightDismissed, setInsightDismissed] = useState(false);
+  const [promptProcessed, setPromptProcessed] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { vibrate } = useHaptics();
   const queryClient = useQueryClient();
@@ -56,6 +57,75 @@ export default function Coach() {
   // API hooks
   const sendMessage = useSendMessage();
   const { data: insightData, isLoading: insightLoading, error: insightError } = useProactiveInsight();
+
+  // Check for URL prompt parameter and auto-send
+  useEffect(() => {
+    if (promptProcessed) return;
+    
+    const params = new URLSearchParams(window.location.search);
+    const promptParam = params.get('prompt');
+    
+    if (promptParam) {
+      const decodedPrompt = decodeURIComponent(promptParam);
+      setPromptProcessed(true);
+      setIsExpanded(true);
+      
+      // Small delay to ensure UI is ready, then auto-send
+      setTimeout(() => {
+        // Directly trigger send without using handleSendMessage to avoid dependency
+        const userMessage: LocalMessage = {
+          id: Date.now(),
+          text: decodedPrompt,
+          sender: "user",
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        
+        // Send to API
+        sendMessage.mutateAsync({
+          message: decodedPrompt,
+          conversationId,
+        }).then((response) => {
+          if (response.conversationId) {
+            setConversationId(response.conversationId);
+          }
+          
+          const aiMessage: LocalMessage = {
+            id: Date.now() + 1,
+            text: response.message,
+            sender: "ai",
+            timestamp: new Date(),
+            toolCalls: response.toolCalls,
+          };
+          setMessages((prev) => [...prev, aiMessage]);
+          
+          // Invalidate cache if needed
+          if (response.toolCalls && response.toolCalls.length > 0 && userId) {
+            const hasWriteAction = response.toolCalls.some(tc =>
+              ["swap_exercise", "adjust_volume"].includes(tc.name)
+            );
+            if (hasWriteAction) {
+              queryClient.invalidateQueries({ queryKey: ["workouts", userId] });
+              queryClient.invalidateQueries({ queryKey: ["sessions", userId] });
+            }
+          }
+        }).catch((error) => {
+          const errorMessage: LocalMessage = {
+            id: Date.now() + 1,
+            text: error instanceof Error ? error.message : "Failed to get a response.",
+            sender: "ai",
+            timestamp: new Date(),
+            isError: true,
+          };
+          setMessages((prev) => [...prev, errorMessage]);
+        });
+      }, 300);
+      
+      // Clean up URL
+      window.history.replaceState({}, '', '/coach');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [promptProcessed]);
 
   // Scroll to bottom when messages change or view expands
   useEffect(() => {

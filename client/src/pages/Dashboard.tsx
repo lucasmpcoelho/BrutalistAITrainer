@@ -23,6 +23,7 @@ import SkipConfirmSheet from "@/components/SkipConfirmSheet";
 import SwapExerciseSheet from "@/components/SwapExerciseSheet";
 import ScheduleEditor from "@/components/ScheduleEditor";
 import PreWorkoutCheckIn from "@/components/PreWorkoutCheckIn";
+import ContextChangePrompts from "@/components/ContextChangePrompts";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
@@ -464,6 +465,11 @@ export default function Dashboard() {
                 </button>
               </div>
             </div>
+          )}
+
+          {/* Context Change Quick Actions - Show for authenticated users */}
+          {isAuthenticated && !isAuthLoading && (
+            <ContextChangePrompts />
           )}
 
           {/* Loading state */}
