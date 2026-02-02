@@ -22,6 +22,7 @@ import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
 import SkipConfirmSheet from "@/components/SkipConfirmSheet";
 import SwapExerciseSheet from "@/components/SwapExerciseSheet";
 import ScheduleEditor from "@/components/ScheduleEditor";
+import PreWorkoutCheckIn from "@/components/PreWorkoutCheckIn";
 import { useHaptics } from "@/hooks/use-haptics";
 import { useExercise, type Exercise } from "@/hooks/use-exercise";
 import { useAuth } from "@/contexts/AuthContext";
@@ -103,6 +104,7 @@ export default function Dashboard() {
   const [skipOpen, setSkipOpen] = useState(false);
   const [swapOpen, setSwapOpen] = useState(false);
   const [scheduleOpen, setScheduleOpen] = useState(false);
+  const [preWorkoutOpen, setPreWorkoutOpen] = useState(false);
   const [selectedExercise, setSelectedExercise] = useState<LocalExercise | null>(null);
 
   // Get week dates
@@ -632,9 +634,11 @@ export default function Dashboard() {
         {!isLoading && hasWorkoutOnSelectedDay && exercises.length > 0 && (
           <div className="fixed bottom-20 inset-x-0 p-4 bg-gradient-to-t from-background via-background to-transparent pt-8">
             {isSelectedDayToday ? (
-              <Link 
-                href={`/session?workoutId=${selectedWorkout?.id}`}
-                onClick={() => vibrate("medium")}
+              <button 
+                onClick={() => {
+                  vibrate("medium");
+                  setPreWorkoutOpen(true);
+                }}
                 className="flex items-center justify-center gap-2 w-full min-h-[56px] 
                   bg-black text-white font-mono font-bold text-lg uppercase tracking-wider
                   rounded-xl shadow-lg hover:bg-gray-900 hover:scale-[1.01]
@@ -644,7 +648,7 @@ export default function Dashboard() {
                 <Zap className="w-5 h-5" />
                 Start Workout
                 <ChevronRight className="w-5 h-5" />
-              </Link>
+              </button>
             ) : (
               <div className="flex flex-col items-center gap-2">
                 <div 
@@ -695,6 +699,18 @@ export default function Dashboard() {
       <ScheduleEditor
         open={scheduleOpen}
         onOpenChange={setScheduleOpen}
+      />
+
+      <PreWorkoutCheckIn
+        open={preWorkoutOpen}
+        onOpenChange={setPreWorkoutOpen}
+        workoutId={selectedWorkout?.id || ""}
+        workoutName={selectedWorkout?.name || "Today's Workout"}
+        exercises={exercises.map(ex => ({
+          id: ex.id,
+          name: ex.name,
+          targetSets: ex.sets,
+        }))}
       />
     </div>
   );
