@@ -101,22 +101,13 @@ Abre chat com Coach pré-preenchido pra facilitar.
 
 ---
 
-### [ ] Form cue proativo ao iniciar exercício
-**Problema:** Tips de forma só aparecem se clicar "Form Cues". PT real fala ANTES de você começar.
+### [x] Form cue proativo ao iniciar exercício ✅
+**Implementado em:** 2025-02-02
 
-**Solução:** Quando entra em novo exercício, mostrar 1 key cue por 3-4 segundos:
-```
-┌─────────────────────────────┐
-│  💡 "Drive through heels,   │
-│      chest up"              │
-└─────────────────────────────┘
-```
+- Campo `keyCue` adicionado ao schema (fallback: `instructions[0]`)
+- Banner aparece por 4s após rest terminar
 - Dismissível com tap
-- Só aparece na primeira série do exercício
-- Puxa do campo `instructions` ou `cues` do exercício
-
-**Impacto:** Médio — melhora experiência sem esforço do usuário
-**Esforço:** Baixo (meio dia)
+- Commit: b81c89b
 
 ---
 

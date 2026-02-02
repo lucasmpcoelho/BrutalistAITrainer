@@ -64,6 +64,7 @@ export interface IStorage {
   // Set methods
   getSets(sessionId: string): Promise<Set[]>;
   createSet(set: InsertSet): Promise<Set>;
+  updateSet(id: string, updates: Partial<InsertSet>): Promise<Set | undefined>;
   
   // Personal records methods
   getPersonalRecords(userId: string, exerciseId?: string): Promise<PersonalRecord[]>;
@@ -264,9 +265,18 @@ export class MemStorage implements IStorage {
       isPR: set.isPR ?? false,
       notes: set.notes || null,
       completedAt: new Date(),
+      difficulty: null,
     };
     this.setsMap.set(id, newSet);
     return newSet;
+  }
+
+  async updateSet(id: string, updates: Partial<InsertSet>): Promise<Set | undefined> {
+    const set = this.setsMap.get(id);
+    if (!set) return undefined;
+    const updated = { ...set, ...updates };
+    this.setsMap.set(id, updated);
+    return updated;
   }
 
   // Personal records methods
@@ -485,6 +495,15 @@ export class DatabaseStorage implements IStorage {
 
   async createSet(set: InsertSet): Promise<Set> {
     const result = await this.db.insert(sets).values(set).returning();
+    return result[0];
+  }
+
+  async updateSet(id: string, updates: Partial<InsertSet>): Promise<Set | undefined> {
+    const result = await this.db
+      .update(sets)
+      .set(updates)
+      .where(eq(sets.id, id))
+      .returning();
     return result[0];
   }
 

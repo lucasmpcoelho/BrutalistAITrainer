@@ -253,6 +253,46 @@ router.get("/:id/sets", verifyFirebaseToken, async (req: Request, res: Response)
   }
 });
 
+/**
+ * PATCH /api/sessions/:id/sets/:setId
+ * Update a set's difficulty feedback
+ */
+router.patch("/:id/sets/:setId", verifyFirebaseToken, async (req: Request, res: Response) => {
+  try {
+    const userId = getUserId(req);
+    if (!userId) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    
+    const session = await storage.getSession(req.params.id);
+    
+    if (!session) {
+      return res.status(404).json({ error: "Session not found" });
+    }
+    
+    if (session.userId !== userId) {
+      return res.status(403).json({ error: "Access denied" });
+    }
+    
+    const { difficulty } = req.body;
+    
+    if (!difficulty || !["hard", "normal", "easy"].includes(difficulty)) {
+      return res.status(400).json({ error: "Invalid difficulty. Must be 'hard', 'normal', or 'easy'" });
+    }
+    
+    const set = await storage.updateSet(req.params.setId, { difficulty });
+    
+    if (!set) {
+      return res.status(404).json({ error: "Set not found" });
+    }
+    
+    res.json({ set });
+  } catch (error) {
+    console.error("[sessions] Update set error:", error);
+    res.status(500).json({ error: "Failed to update set" });
+  }
+});
+
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================

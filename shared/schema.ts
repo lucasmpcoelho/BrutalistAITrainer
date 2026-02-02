@@ -147,6 +147,8 @@ export const sets = pgTable("sets", {
   isPR: boolean("is_pr").default(false), // Personal Record flag
   notes: text("notes"),
   completedAt: timestamp("completed_at").defaultNow().notNull(),
+  // Feedback from user about difficulty
+  difficulty: text("difficulty"), // "hard" | "normal" | "easy"
 });
 
 export const setsRelations = relations(sets, ({ one }) => ({

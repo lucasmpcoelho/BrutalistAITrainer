@@ -30,6 +30,7 @@ export interface LoggedSet {
   isPR: boolean;
   notes: string | null;
   completedAt: string;
+  difficulty: "hard" | "normal" | "easy" | null;
 }
 
 export interface Session {
@@ -187,6 +188,27 @@ async function fetchSessionSets(sessionId: string): Promise<LoggedSet[]> {
   return data.sets;
 }
 
+async function updateSetDifficulty(
+  sessionId: string,
+  setId: string,
+  difficulty: "hard" | "normal" | "easy"
+): Promise<LoggedSet> {
+  const headers = await getAuthHeaders();
+  const response = await fetch(`/api/sessions/${sessionId}/sets/${setId}`, {
+    method: "PATCH",
+    headers,
+    credentials: "include",
+    body: JSON.stringify({ difficulty }),
+  });
+  
+  if (!response.ok) {
+    throw new Error("Failed to update set difficulty");
+  }
+  
+  const data = await response.json();
+  return data.set;
+}
+
 // ============================================================================
 // HOOKS
 // ============================================================================
@@ -301,6 +323,32 @@ export function useSessionSets(sessionId: string | null, userId: string | null) 
     queryKey: ["sessionSets", userId, sessionId],
     queryFn: () => fetchSessionSets(sessionId!),
     enabled: !!sessionId && !!userId,
+  });
+}
+
+/**
+ * Update difficulty feedback for a set
+ * @param userId - Firebase user ID (for cache invalidation)
+ */
+export function useUpdateSetDifficulty(userId: string | null) {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: ({
+      sessionId,
+      setId,
+      difficulty,
+    }: {
+      sessionId: string;
+      setId: string;
+      difficulty: "hard" | "normal" | "easy";
+    }) => updateSetDifficulty(sessionId, setId, difficulty),
+    onSuccess: (_, { sessionId }) => {
+      if (userId) {
+        queryClient.invalidateQueries({ queryKey: ["session", userId, sessionId] });
+        queryClient.invalidateQueries({ queryKey: ["sessionSets", userId, sessionId] });
+      }
+    },
   });
 }
 

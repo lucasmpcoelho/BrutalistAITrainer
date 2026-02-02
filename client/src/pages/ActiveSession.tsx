@@ -18,7 +18,8 @@ import {
   useStartSession, 
   useLogSet, 
   useCompleteSession,
-  useActiveSession 
+  useActiveSession,
+  useUpdateSetDifficulty
 } from "@/hooks/use-sessions";
 import { useAuth } from "@/contexts/AuthContext";
 import ExerciseNotesSheet from "@/components/ExerciseNotesSheet";
@@ -68,6 +69,15 @@ export default function ActiveSession() {
   const [showFormCue, setShowFormCue] = useState(false);
   const formCueTimerRef = useRef<NodeJS.Timeout | null>(null);
   
+  // Last logged set state (for feedback during rest)
+  const [lastLoggedSet, setLastLoggedSet] = useState<{
+    id: string;
+    weight: number;
+    reps: number;
+    exerciseName: string;
+  } | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState(false);
+  
   const { vibrate } = useHaptics();
 
   // Session hooks (with userId for cache isolation)
@@ -75,6 +85,7 @@ export default function ActiveSession() {
   const logSet = useLogSet(userId);
   const completeSession = useCompleteSession(userId);
   const { session: existingActiveSession } = useActiveSession(userId);
+  const updateSetDifficulty = useUpdateSetDifficulty(userId);
 
   // Build exercises array from workout data
   const exercises: SessionExercise[] = useMemo(() => {
@@ -210,6 +221,15 @@ export default function ActiveSession() {
       
       console.log("[ActiveSession] Logged set:", result);
       
+      // Save last logged set for feedback during rest
+      setLastLoggedSet({
+        id: result.set.id,
+        weight,
+        reps,
+        exerciseName: currentExercise.name,
+      });
+      setFeedbackGiven(false);
+      
       // Show PR celebration if applicable
       if (result.isPR) {
         vibrate("success");
@@ -308,6 +328,25 @@ export default function ActiveSession() {
     setShowFormCue(false);
     if (formCueTimerRef.current) {
       clearTimeout(formCueTimerRef.current);
+    }
+  };
+
+  // Handle difficulty feedback
+  const handleDifficultyFeedback = async (difficulty: "hard" | "normal" | "easy") => {
+    if (!sessionId || !lastLoggedSet || feedbackGiven) return;
+    
+    vibrate("light");
+    setFeedbackGiven(true);
+    
+    try {
+      await updateSetDifficulty.mutateAsync({
+        sessionId,
+        setId: lastLoggedSet.id,
+        difficulty,
+      });
+      console.log("[ActiveSession] Feedback recorded:", difficulty);
+    } catch (error) {
+      console.error("[ActiveSession] Failed to record feedback:", error);
     }
   };
 
@@ -563,6 +602,54 @@ export default function ActiveSession() {
               <div className="font-display text-[80px] md:text-[120px] leading-none font-black tabular-nums font-mono">
                 {formatTime(restTimer)}
               </div>
+
+              {/* Last Set Feedback - Optional */}
+              {lastLoggedSet && !feedbackGiven && (
+                <div className="animate-in fade-in slide-in-from-bottom-2 duration-300">
+                  <div className="text-gray-400 text-xs font-mono uppercase tracking-wider mb-3">
+                    Last set: {lastLoggedSet.weight}kg × {lastLoggedSet.reps}
+                  </div>
+                  <div className="flex justify-center gap-3">
+                    <button
+                      onClick={() => handleDifficultyFeedback("hard")}
+                      className="px-5 py-3 border border-red-500/30 rounded-xl
+                        hover:bg-red-500/20 text-red-400
+                        transition-colors touch-manipulation active:scale-95
+                        flex flex-col items-center gap-1"
+                    >
+                      <span className="text-xl">😰</span>
+                      <span className="text-[10px] font-mono uppercase">Hard</span>
+                    </button>
+                    <button
+                      onClick={() => handleDifficultyFeedback("normal")}
+                      className="px-5 py-3 border border-white/20 rounded-xl
+                        hover:bg-white/10 text-white
+                        transition-colors touch-manipulation active:scale-95
+                        flex flex-col items-center gap-1"
+                    >
+                      <span className="text-xl">✓</span>
+                      <span className="text-[10px] font-mono uppercase">Good</span>
+                    </button>
+                    <button
+                      onClick={() => handleDifficultyFeedback("easy")}
+                      className="px-5 py-3 border border-green-500/30 rounded-xl
+                        hover:bg-green-500/20 text-green-400
+                        transition-colors touch-manipulation active:scale-95
+                        flex flex-col items-center gap-1"
+                    >
+                      <span className="text-xl">🔥</span>
+                      <span className="text-[10px] font-mono uppercase">Easy</span>
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {/* Feedback confirmation */}
+              {feedbackGiven && (
+                <div className="text-accent text-sm font-mono animate-in fade-in duration-200">
+                  ✓ Feedback recorded
+                </div>
+              )}
 
               {/* +/- Rest Buttons - Large touch targets */}
               <div className="flex justify-center gap-4">
