@@ -61,43 +61,27 @@ Abre chat com Coach pré-preenchido pra facilitar.
 
 ---
 
-### [ ] Pre-workout check-in
-**Problema:** App não sabe como o usuário está hoje. Treino é sempre o mesmo independente de sono, energia, dor.
+### [x] Pre-workout check-in ✅
+**Implementado em:** 2025-02-02
 
-**Solução:** Tela de 3 segundos antes de começar:
-```
-"Como você tá hoje?"
-😴 Cansado  →  -10-20% volume
-💪 Normal   →  treino planejado  
-🔥 Energizado  →  pode sugerir +1 set
-🤕 Com dor  →  oferece modificações/swaps
-```
-
-**Impacto:** Alto — diferencial de PT real
-**Esforço:** Baixo (1 dia)
+- Sheet aparece ao clicar "Start Workout"
+- 4 opções: 😴 Cansado, 💪 Normal, 🔥 Energizado, 🤕 Com dor
+- Mostra sugestões de ajuste que usuário pode aceitar/rejeitar
+- Normal vai direto pro treino
+- Pode pular check-in se preferir
+- Commit: 2e462a5
 
 ---
 
-### [ ] Feedback no Rest Screen (zero friction)
-**Problema:** Não sabemos se o set foi fácil/difícil. Não conseguimos adaptar.
+### [x] Feedback no Rest Screen (zero friction) ✅
+**Implementado em:** 2025-02-02
 
-**Solução:** Durante o rest timer, mostrar opção de feedback opcional:
-```
-┌─────────────────────────────┐
-│     SYSTEM COOLING DOWN     │
-│          01:23              │
-│                             │
-│   Último set: 80kg × 10     │
-│      😰    ✓    🔥          │  ← tap opcional
-│                             │
-│        [ SKIP REST ]        │
-└─────────────────────────────┘
-```
-- Se não tocar em nada → assume normal
-- Se tocar → registra e usa pra sugerir ajustes
-
-**Impacto:** Alto — feedback loop sem friction
-**Esforço:** Baixo (1 dia)
+- Durante rest, mostra último set (peso × reps)
+- 3 botões: 😰 Hard, ✓ Good, 🔥 Easy
+- Feedback é opcional (pode ignorar)
+- Salva difficulty no banco (campo `sets.difficulty`)
+- Visual confirmation quando feedback é registrado
+- Commit: 874242e
 
 ---
 
