@@ -16,6 +16,51 @@ O app deve funcionar como um PT real:
 
 ## 🔥 Prioridade Alta
 
+### [ ] Adaptação dinâmica de treino via linguagem natural
+**Problema:** Sistema é determinístico demais. Usuário faz onboarding uma vez e fica preso àquele contexto. Vida real muda:
+- Viajando com equipamento limitado
+- Mudou de academia
+- Quer focar em músculo específico
+- Lesão temporária
+
+**Solução:**
+
+**1. Nova tool `regenerate_program` pro AI Coach:**
+```typescript
+regenerate_program({
+  temporaryEquipment: ["dumbbell", "bench"],  // override
+  focusMuscles: ["chest", "triceps"],         // priorizar
+  excludeMuscles: ["shoulders"],               // injury/skip
+  duration: "2_weeks" | "permanent",
+  notes: "Viajando, hotel gym"
+})
+```
+
+**2. Atualizar prompt do Coach:**
+- Detectar mudanças de contexto (viagem, lesão, foco)
+- Perguntar detalhes relevantes
+- Chamar `regenerate_program` automaticamente
+
+**3. UX: Quick-access "Algo mudou?" no Dashboard:**
+```
+"Algo mudou? Me conta:"
+- 🏨 Tô viajando (equipamento limitado)
+- 🎯 Quero focar em [músculo]  
+- 🤕 Tô com dor em [área]
+- 🔄 Voltei ao normal
+```
+Abre chat com Coach pré-preenchido pra facilitar.
+
+**Exemplos de uso:**
+- "Tô no hotel, só tem halteres até 20kg e banco" → regenera programa pra 2 semanas
+- "Quero focar em peito no próximo mês" → ajusta split pra mais volume de chest
+- "Machuquei o ombro" → remove exercícios de ombro, sugere alternativas
+
+**Impacto:** Muito alto — transforma app estático em PT adaptável
+**Esforço:** Médio-Alto (3-4 dias)
+
+---
+
 ### [ ] Pre-workout check-in
 **Problema:** App não sabe como o usuário está hoje. Treino é sempre o mesmo independente de sono, energia, dor.
 
