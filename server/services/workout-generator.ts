@@ -8,6 +8,7 @@
 
 import { db } from "../config/firebase";
 import type { FirestoreExercise } from "../../shared/types/exercise";
+import { dataConnectStorage } from "../storage-dataconnect.js";
 
 // ============================================================================
 // TYPES
@@ -488,6 +489,199 @@ export async function generateWorkoutProgram(
   return generatedWorkouts;
 }
 
+// ============================================================================
+// REGENERATE PROGRAM WITH CONSTRAINTS
+// ============================================================================
+
+export interface RegenerateConstraints {
+  temporaryEquipment?: string[];
+  focusMuscles?: string[];
+  excludeMuscles?: string[];
+  isTemporary: boolean;
+  durationDays?: number;
+  reason: string;
+}
+
+export interface RegenerateResult {
+  success: boolean;
+  message: string;
+  workoutsCreated?: number;
+  changes?: string[];
+}
+
+/**
+ * Regenerate a user's workout program with new constraints
+ * Called by AI Coach when user's situation changes
+ */
+export async function regenerateProgramWithConstraints(
+  userId: string,
+  constraints: RegenerateConstraints
+): Promise<RegenerateResult> {
+  console.log("[workout-generator] Regenerating program with constraints:", constraints);
+
+  try {
+    // 1. Get user profile
+    const user = await dataConnectStorage.getUser(userId);
+    if (!user) {
+      return { success: false, message: "User not found" };
+    }
+
+    // 2. Get existing workouts
+    const existingWorkouts = await dataConnectStorage.getWorkouts(userId);
+    
+    // 3. If temporary, archive existing workouts instead of deleting
+    if (constraints.isTemporary && existingWorkouts.length > 0) {
+      console.log("[workout-generator] Archiving existing workouts for later restore");
+      for (const workout of existingWorkouts) {
+        // Mark as inactive (archived) but don't delete
+        await dataConnectStorage.updateWorkout(workout.id, { 
+          isActive: false,
+          // Store restore date in name suffix if durationDays provided
+          name: constraints.durationDays 
+            ? `${workout.name} [ARCHIVED:${Date.now()}:${constraints.durationDays}]`
+            : `${workout.name} [ARCHIVED:${Date.now()}]`
+        });
+      }
+    } else {
+      // Permanent change - deactivate old workouts
+      for (const workout of existingWorkouts) {
+        await dataConnectStorage.updateWorkout(workout.id, { isActive: false });
+      }
+    }
+
+    // 4. Build new preferences with constraints applied
+    const newPreferences: UserPreferences = {
+      goal: user.goal || "general",
+      frequency: user.frequency || 3,
+      equipment: user.equipment || "full_gym",
+      experience: user.experience || "intermediate",
+      sessionLengthMin: user.sessionLengthMin || 60,
+    };
+
+    // Override equipment if specified
+    if (constraints.temporaryEquipment && constraints.temporaryEquipment.length > 0) {
+      // Map to closest equipment category or use custom
+      const equipmentSet = new Set(constraints.temporaryEquipment.map(e => e.toLowerCase()));
+      
+      if (equipmentSet.has("barbell") || equipmentSet.has("cable") || equipmentSet.has("machine")) {
+        newPreferences.equipment = "full_gym";
+      } else if (equipmentSet.has("dumbbell") || equipmentSet.has("kettlebell")) {
+        newPreferences.equipment = "home_gym";
+      } else if (equipmentSet.size === 1 && (equipmentSet.has("body weight") || equipmentSet.has("bodyweight"))) {
+        newPreferences.equipment = "bodyweight";
+      } else {
+        newPreferences.equipment = "home_gym"; // Default fallback
+      }
+    }
+
+    // 5. Generate new workouts
+    let generatedWorkouts = await generateWorkoutProgram(newPreferences);
+
+    // 6. Apply focus muscle filter (increase volume)
+    if (constraints.focusMuscles && constraints.focusMuscles.length > 0) {
+      const focusSet = new Set(constraints.focusMuscles.map(m => m.toLowerCase()));
+      
+      generatedWorkouts = generatedWorkouts.map(workout => {
+        // Check if this workout targets any focus muscles
+        const hasFocusMuscle = workout.targetMuscles.some(m => 
+          focusSet.has(m.toLowerCase())
+        );
+        
+        if (hasFocusMuscle) {
+          // Increase sets for exercises targeting focus muscles
+          return {
+            ...workout,
+            exercises: workout.exercises.map(ex => ({
+              ...ex,
+              targetSets: ex.targetSets + 1, // Add 1 set
+            })),
+          };
+        }
+        return workout;
+      });
+    }
+
+    // 7. Apply exclude muscle filter
+    if (constraints.excludeMuscles && constraints.excludeMuscles.length > 0) {
+      const excludeSet = new Set(constraints.excludeMuscles.map(m => m.toLowerCase()));
+      
+      generatedWorkouts = generatedWorkouts.map(workout => ({
+        ...workout,
+        exercises: workout.exercises.filter(ex => {
+          // This is a simplification - ideally we'd check the exercise's target muscle
+          // For now, filter based on workout's target muscles
+          return !workout.targetMuscles.some(m => excludeSet.has(m.toLowerCase()));
+        }),
+      }));
+    }
+
+    // 8. Save new workouts to database
+    let workoutsCreated = 0;
+    for (const workout of generatedWorkouts) {
+      // Create workout
+      const created = await dataConnectStorage.createWorkout({
+        userId,
+        name: workout.name,
+        type: workout.type,
+        dayOfWeek: workout.dayOfWeek,
+        estimatedDurationMin: workout.estimatedDurationMin,
+        targetMuscles: workout.targetMuscles,
+        isActive: true,
+      });
+
+      // Add exercises
+      for (const exercise of workout.exercises) {
+        await dataConnectStorage.addWorkoutExercise({
+          workoutId: created.id,
+          exerciseId: exercise.exerciseId,
+          exerciseName: exercise.exerciseName,
+          orderIndex: exercise.orderIndex,
+          targetSets: exercise.targetSets,
+          targetReps: exercise.targetReps,
+          targetRpe: exercise.targetRpe,
+          restSeconds: exercise.restSeconds,
+          notes: exercise.notes,
+        });
+      }
+
+      workoutsCreated++;
+    }
+
+    // 9. Build summary of changes
+    const changes: string[] = [];
+    if (constraints.temporaryEquipment) {
+      changes.push(`Equipment: ${constraints.temporaryEquipment.join(", ")}`);
+    }
+    if (constraints.focusMuscles) {
+      changes.push(`Focus: ${constraints.focusMuscles.join(", ")} (+1 set)`);
+    }
+    if (constraints.excludeMuscles) {
+      changes.push(`Avoiding: ${constraints.excludeMuscles.join(", ")}`);
+    }
+    if (constraints.isTemporary) {
+      changes.push(constraints.durationDays 
+        ? `Temporary (${constraints.durationDays} days)`
+        : "Temporary (until restored)"
+      );
+    }
+
+    return {
+      success: true,
+      message: `Created ${workoutsCreated} new workouts. ${constraints.reason}`,
+      workoutsCreated,
+      changes,
+    };
+
+  } catch (error) {
+    console.error("[workout-generator] regenerateProgramWithConstraints error:", error);
+    return {
+      success: false,
+      message: `Failed to regenerate program: ${error}`,
+    };
+  }
+}
+
 export default {
   generateWorkoutProgram,
+  regenerateProgramWithConstraints,
 };

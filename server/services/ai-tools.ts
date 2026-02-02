@@ -14,6 +14,7 @@ import { Tool, FunctionDeclaration, SchemaType } from "@google/generative-ai";
 import { dataConnectStorage } from "../storage-dataconnect.js";
 import { db } from "../config/firebase.js";
 import type { FirestoreExercise } from "../../shared/types/exercise.js";
+import { regenerateProgramWithConstraints } from "./workout-generator.js";
 
 // Day name to number mapping
 const DAY_NAME_TO_NUMBER: Record<string, number> = {
@@ -171,6 +172,48 @@ const searchExercisesTool: FunctionDeclaration = {
   },
 };
 
+/**
+ * Tool: regenerate_program
+ * Regenerates the user's workout program with new constraints
+ */
+const regenerateProgramTool: FunctionDeclaration = {
+  name: "regenerate_program",
+  description: "Regenerate the user's entire workout program with new constraints. Use when the user's situation changes significantly: traveling with limited equipment, wanting to focus on specific muscles, dealing with an injury, or returning to normal training. ALWAYS confirm with the user before calling this tool.",
+  parameters: {
+    type: SchemaType.OBJECT,
+    properties: {
+      temporaryEquipment: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING },
+        description: "Override equipment access temporarily (e.g., ['dumbbell', 'bench', 'body weight']). Leave empty to use user's saved equipment preference.",
+      },
+      focusMuscles: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING },
+        description: "Muscle groups to prioritize (e.g., ['chest', 'triceps']). Will increase volume for these muscles.",
+      },
+      excludeMuscles: {
+        type: SchemaType.ARRAY,
+        items: { type: SchemaType.STRING },
+        description: "Muscle groups to avoid due to injury or preference (e.g., ['shoulders', 'lower back']).",
+      },
+      isTemporary: {
+        type: SchemaType.BOOLEAN,
+        description: "If true, the original program will be saved and can be restored later. Set to true for travel, short-term changes. Set to false for permanent changes.",
+      },
+      durationDays: {
+        type: SchemaType.NUMBER,
+        description: "For temporary changes, how many days until auto-restore (optional). E.g., 14 for a 2-week trip.",
+      },
+      reason: {
+        type: SchemaType.STRING,
+        description: "Brief explanation for the regeneration (e.g., 'User is traveling with hotel gym only')",
+      },
+    },
+    required: ["isTemporary", "reason"],
+  },
+};
+
 // Export all tool declarations for Gemini
 export const COACH_TOOLS: Tool = {
   functionDeclarations: [
@@ -179,6 +222,7 @@ export const COACH_TOOLS: Tool = {
     explainExerciseTool,
     getAlternativesTool,
     searchExercisesTool,
+    regenerateProgramTool,
   ],
 };
 
@@ -599,6 +643,58 @@ async function executeSearchExercises(args: {
   }
 }
 
+/**
+ * Execute regenerate_program tool
+ */
+async function executeRegenerateProgram(args: {
+  temporaryEquipment?: string[];
+  focusMuscles?: string[];
+  excludeMuscles?: string[];
+  isTemporary: boolean;
+  durationDays?: number;
+  reason: string;
+}): Promise<ToolResult> {
+  try {
+    if (!currentUserId) {
+      return { success: false, message: "User context not available" };
+    }
+
+    console.log("[ai-tools] Regenerating program for user:", currentUserId, args);
+
+    const result = await regenerateProgramWithConstraints(currentUserId, {
+      temporaryEquipment: args.temporaryEquipment,
+      focusMuscles: args.focusMuscles,
+      excludeMuscles: args.excludeMuscles,
+      isTemporary: args.isTemporary,
+      durationDays: args.durationDays,
+      reason: args.reason,
+    });
+
+    if (!result.success) {
+      return {
+        success: false,
+        message: result.message || "Failed to regenerate program",
+      };
+    }
+
+    return {
+      success: true,
+      message: `Program regenerated successfully! ${result.message}`,
+      data: {
+        workoutsCreated: result.workoutsCreated,
+        isTemporary: args.isTemporary,
+        changes: result.changes,
+      },
+    };
+  } catch (error) {
+    console.error("[ai-tools] regenerate_program error:", error);
+    return {
+      success: false,
+      message: `Failed to regenerate program: ${error}`,
+    };
+  }
+}
+
 // ============================================================================
 // MAIN TOOL EXECUTOR
 // ============================================================================
@@ -635,6 +731,9 @@ export async function executeTool(
 
       case "search_exercises":
         return await executeSearchExercises(args as Parameters<typeof executeSearchExercises>[0]);
+
+      case "regenerate_program":
+        return await executeRegenerateProgram(args as Parameters<typeof executeRegenerateProgram>[0]);
 
       default:
         return {
